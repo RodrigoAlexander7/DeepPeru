@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import dotenv from "dotenv"
-import authRouter from './auth/auth.rute'
+import authRouter from '@/auth/auth.route'
 
 dotenv.config()   // load environment var
 const port = 3000;

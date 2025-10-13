@@ -1,5 +1,5 @@
 import { ExpressAuth } from "@auth/express"
-import { authConfig } from "./auth.config"
+import { authConfig } from "@/auth/auth.config"
 import { Router } from "express"
 
 const authRouter = Router()
