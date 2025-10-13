@@ -6,7 +6,7 @@ dotenv.config()   // load environment var
 const port = 3000;
 const app = express();
 
-app.use(express.json)   // middleware to acept json responses
+app.use(express.json())   // middleware to acept json responses
 app.use(authRouter)
 
 app.get("/", (req: Request, res: Response) => {

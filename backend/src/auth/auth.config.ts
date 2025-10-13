@@ -1,7 +1,8 @@
 import { ExpressAuthConfig } from "@auth/express"
 import Google from "@auth/express/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "../generated/prisma"
+
 
 // we dont load environment var here cause we do it on the global auth 
 // instance on index

@@ -4,7 +4,7 @@ import { Router } from "express"
 
 const authRouter = Router()
 
-authRouter.use("/auth/*", ExpressAuth(authConfig))
+authRouter.use("/auth", ExpressAuth(authConfig))
 
 export default authRouter
 
