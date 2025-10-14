@@ -34,11 +34,12 @@ export const authConfig: ExpressAuthConfig = {
                email: token.email,
                picture: token.picture
             },
-            process.env.AUTH_GOOGLE_SECRET!,
+            process.env.AUTH_SECRET!,
          )
 
          session.user.id = token.id as string
          session.sessionToken = accesToken
+         console.log('Custom JWT:', accesToken)
          return session
       }
    }
