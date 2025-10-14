@@ -12,7 +12,7 @@ const prisma = new PrismaClient()
 
 export const authConfig: ExpressAuthConfig = {
    adapter: PrismaAdapter(prisma),
-   secret: process.env.GOOGLE_CLIENT_SECRET!,
+   secret: process.env.AUTH_SECRET!,
    session: { strategy: "jwt" },
    providers: [
       Google({
