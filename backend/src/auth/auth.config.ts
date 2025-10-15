@@ -3,6 +3,8 @@ import Google from "@auth/express/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { PrismaClient } from "@/generated/prisma"
 import jwt from "jsonwebtoken"
+import { ENV } from "@/configs/env";
+
 
 
 // we dont load environment var here cause we do it on the global auth 
@@ -12,12 +14,12 @@ const prisma = new PrismaClient()
 
 export const authConfig: ExpressAuthConfig = {
    adapter: PrismaAdapter(prisma),
-   secret: process.env.AUTH_SECRET!,
+   secret: ENV.AUTH_SECRET!,
    session: { strategy: "jwt" },
    providers: [
       Google({
-         clientId: process.env.AUTH_GOOGLE_ID!,
-         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+         clientId: ENV.AUTH_GOOGLE_ID!,
+         clientSecret: ENV.AUTH_GOOGLE_SECRET!,
       })
    ],
    callbacks: {
