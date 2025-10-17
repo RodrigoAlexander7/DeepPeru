@@ -4,7 +4,7 @@ import authRouter from '@/auth/auth.route'
 import { verifyToken } from "@/middleware/auth";
 
 dotenv.config()   // load environment var
-const port = 3000;
+const port = 4000;
 const app = express();
 
 app.use(express.json())   // middleware to acept json responses
