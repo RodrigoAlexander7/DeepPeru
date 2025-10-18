@@ -13,3 +13,24 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+/// Represents the system user for any role
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  // First name is related to all conventional names, such as "Alfredo David"
+  firstName    String
+  /// Similar to First Name, such as "Huamani Ollachica"
+  lastName     String
+  avatarUrl    String?   // opcional
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  gender       Gender?
+}
+
+/// Define los roles permitidos para un usuario.
+enum Gender {
+  WOMAN
+  MAN
+  OTHER
+}
