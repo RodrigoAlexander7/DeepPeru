@@ -12,4 +12,5 @@ export function useAuthGuard() {
          router.replace('/login')
       }
    }, [user, isLoading, router]) // update this every time that user, isLoading or router change
+   return !!user
 }

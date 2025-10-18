@@ -5,7 +5,7 @@ type User = { id: string; name: string; email: string; image?: string };
 
 type UserState = {
    user: User | null;
-   isLoading: boolean;
+   isLoading: boolean;        // 
    fetchUser: () => Promise<void>;     // async function to fetch user session
    logout: () => Promise<void>;        // async function to log out user         
 };
