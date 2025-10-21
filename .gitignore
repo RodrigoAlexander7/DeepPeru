@@ -29,3 +29,5 @@ Thumbs.db
 /frontend/.env.*.local
 
 /frontend/.vercel
+
+backup_backend/
