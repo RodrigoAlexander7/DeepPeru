@@ -23,17 +23,21 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
          scope: ["email", "profile"]   // the user's data that we want from Google
       })
    }
+   // THIS'S SO IMPORTANT 
+   // that we return here -> is that Passport store on req.user 
    async validate(accessToken: string, refreshToken: string, profile: Profile) {
       // Profile object contains so much (and unnecesary) information so just incluthe that we want
       const { id, displayName, emails, photos } = profile;
 
-      return this.authService.callbackOauthGoogle({
+      const user = {
          name: displayName,
          email: emails?.[0]?.value,
          image: photos?.[0]?.value,
          accessToken,
          refreshToken
-      })
+      }
+
+      return user
 
    }
 }

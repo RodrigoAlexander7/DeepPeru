@@ -12,6 +12,7 @@ export class AuthService {
 
    //we dont use access token nor refresh tken
    async callbackOauthGoogle({ name, email, image, accessToken, refreshToken, }) {
+      console.log('EMAIL RECIBIDO:', email);
       if (!email) throw new UnauthorizedException('Email not found from Google');
 
       let user = await this.usersService.findByEmail(email);
