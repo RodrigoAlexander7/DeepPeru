@@ -6,6 +6,13 @@ import { Profile } from "passport-google-oauth20";
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
+   //  |->  PassportStrategy: Nest wrapper that to implement Passport strategies
+   //       Strategy: Passport class and "Define cómo se conecta con Google, cómo intercambia tokens, etc.
+   //       so we extends from Strategy and register with the 'google' name
+   //       and our class implement the validate method
+   //  ->  So when we call @UseGuards(AuthGuard('google')) 
+   //      - Nest call the strategy with 'google's' name(our class) and use it
+
    constructor(
       private readonly authService: AuthService,   // inject the service (AuthService) as dependencie
    ) {

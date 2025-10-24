@@ -2,8 +2,6 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '@/users/users.service';
 
-
-
 @Injectable()
 export class AuthService {
    // dependences injection
@@ -12,6 +10,7 @@ export class AuthService {
       private readonly usersService: UsersService
    ) { }
 
+   //we dont use access token nor refresh tken
    async callbackOauthGoogle({ name, email, image, accessToken, refreshToken, }) {
       if (!email) throw new UnauthorizedException('Email not found from Google');
 
