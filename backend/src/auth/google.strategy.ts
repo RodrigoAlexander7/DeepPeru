@@ -17,10 +17,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       private readonly authService: AuthService,   // inject the service (AuthService) as dependencie
    ) {
       super({
-         clientID: process.env.AUTH_GOOGLE_ID,
-         clientSecret: process.env.AUTH_GOOGLE_SECRET,
-         callbackURL: process.env.GOOGLE_CALLBACK_URL,
-         scope: ["email", "profile"]   // the user's data that we want from Google
+         clientID: process.env.AUTH_GOOGLE_ID!,
+         clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+         callbackURL: process.env.GOOGLE_CALLBACK_URL!,
+         scope: ["email", "profile"],   // the user's data that we want from Google
+         passReqToCallback: true,
       })
    }
    // THIS'S SO IMPORTANT 
