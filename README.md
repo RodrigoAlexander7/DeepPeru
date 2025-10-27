@@ -18,10 +18,6 @@ pnpm install
 
 Crear `apps/backend/.env`:
 
-```env
-DATABASE_URL="postgresql://user:password@localhost:5432/deepperu"
-```
-
 Ejecutar migraciones:
 
 ```bash
@@ -31,14 +27,10 @@ pnpm prisma migrate dev
 
 ## Desarrollo
 
-### Iniciar todo
+Para backend
 
 ```bash
-# Backend (puerto 3000)
-pnpm --filter @deepperu/backend run dev
-
-# Frontend (puerto 4000)
-pnpm --filter @deepperu/frontend run dev
+./init_backend.sh
 ```
 
 ### Comandos útiles
