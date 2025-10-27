@@ -29,3 +29,4 @@ Thumbs.db
 /frontend/.env.*.local
 
 /frontend/.vercel
+apps/backend/dist/
