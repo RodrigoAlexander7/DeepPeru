@@ -5,8 +5,10 @@ import { INestApplication } from '@nestjs/common';
 
 const developerDocumentation = (app: INestApplication) => {
   const config = new DocumentBuilder()
-    .setTitle('Cats example')
-    .setDescription('The cats API description')
+    .setTitle('Backend documentation')
+    .setDescription(
+      'This API serves the endpoints required for all the functionalities of the application.',
+    )
     .setVersion('1.0')
     .addTag('cats')
     .build();
