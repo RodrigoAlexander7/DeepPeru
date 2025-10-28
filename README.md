@@ -36,6 +36,10 @@ Para backend
 ### Comandos útiles
 
 ```bash
+# Generate prisma
+cd ./apps/backend
+pnpx prisma generate
+
 # Formatear código
 pnpm run format
 
