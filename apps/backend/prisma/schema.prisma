@@ -44,6 +44,7 @@ model User {
   systemAdmin    SystemAdmin?
   companyAdmin   CompanyAdmin?
   tourismWorkers CompanyWorker[]
+  tourist        Tourist?
 }
 
 // Global system administrator model
@@ -62,6 +63,19 @@ model CompanyAdmin {
   company          TourismCompany[]
   createdAt        DateTime         @default(now())
   tourismCompanyId Int
+}
+
+model Tourist {
+  id               Int       @id @default(autoincrement())
+  userId           String    @unique
+  languageId       Int? /// Preferred language ID
+  currencyId       Int? /// Preferred currency ID
+  emergencyPhoneId Int? /// Emergency contact phone number
+  // Relations
+  user             User      @relation(fields: [userId], references: [id])
+  language         Language? @relation(fields: [languageId], references: [id])
+  currency         Currency? @relation(fields: [currencyId], references: [id])
+  emergencyPhone   Phone?    @relation(fields: [emergencyPhoneId], references: [id])
 }
 
 model CompanyWorker {
@@ -91,11 +105,12 @@ enum Gender {
 }
 
 model Phone {
-  id        Int     @id
+  id        Int       @id
   number    String
   countryId Int
-  country   Country @relation(fields: [countryId], references: [id])
+  country   Country   @relation(fields: [countryId], references: [id])
   users     User[]
+  tourists  Tourist[]
 }
 
 model Account {
@@ -155,6 +170,7 @@ model Language {
   countryTranslations CountryTranslation[]
   regionTranslations  RegionTranslation[]
   cityTranslations    CityTranslation[]
+  tourist             Tourist[]
 }
 
 /// ===============================
@@ -387,4 +403,5 @@ model Currency {
   /// Symbol used, e.g., "S/"
   symbol    String?
   countries Country[]
+  tourists  Tourist[]
 }
