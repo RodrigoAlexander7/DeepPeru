@@ -12,15 +12,61 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// User Table with extended personal data
+/// - Leagal identity fields are not required when the user is a tourist
 model User {
-  id       String    @id @default(cuid())
-  name     String?
-  email    String?   @unique
-  image    String?
-  accounts Account[]
-  sessions Session[]
-  phoneId  Int?
-  phone    Phone?    @relation(fields: [phoneId], references: [id])
+  id        String    @id @default(cuid())
+  email     String?   @unique
+  image     String?
+  accounts  Account[]
+  sessions  Session[]
+  isActive  Boolean   @default(true) /// Whether the user is active
+  /// When the record was created
+  createdAt DateTime  @default(now())
+  /// When the record was last updated
+  updatedAt DateTime  @updatedAt
+
+  // Personal data
+  phoneId           Int?
+  phone             Phone?    @relation(fields: [phoneId], references: [id])
+  firstName         String /// Exameple: John, Alvaro Raúl
+  lastName          String /// Example: Doe, Gómez Pérez
+  gender            Gender?
+  dateOfBirth       DateTime? /// Example: "1990-05-20T00:00:00.000Z"
+  nationalityId     Int? /// Reference to Country, also used for document number
+  nationality       Country?  @relation(fields: [nationalityId], references: [id], name: "UserNationality")
+  documentNumber    String? /// National ID, Example: DNI, 12345678 in Peru, relies on nationality
+  passportNumber    String?   @unique /// Passport number for international travel
+  passportCountryId Int? // Reuses Country table
+  passportCountry   Country?  @relation(fields: [passportCountryId], references: [id], name: "PassportCountry")
+
+  // Relations
+  systemAdmin  SystemAdmin?
+  companyAdmin CompanyAdmin?
+}
+
+// Global system administrator model
+model SystemAdmin {
+  id        Int      @id @default(autoincrement())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// Company administrator model, user who manages a tourism company
+model CompanyAdmin {
+  id               Int              @id @default(autoincrement())
+  userId           String           @unique
+  user             User             @relation(fields: [userId], references: [id])
+  company          TourismCompany[]
+  createdAt        DateTime         @default(now())
+  tourismCompanyId Int
+}
+
+enum Gender {
+  MALE /// Masculino
+  FEMALE /// Femenino  
+  UNKN // Not specified
 }
 
 model Phone {
@@ -131,6 +177,8 @@ model TourismCompany {
   createdAt          DateTime                    @default(now())
   /// When the record was last updated
   updatedAt          DateTime                    @updatedAt
+  adminId            Int
+  admin              CompanyAdmin                @relation(fields: [adminId], references: [id])
 }
 
 /// ===============================
@@ -196,20 +244,22 @@ model CompanyInstallation {
 /// Represents a country.
 /// Supports multilingual display names via CountryTranslation.
 model Country {
-  id           Int                  @id @default(autoincrement())
+  id                   Int                  @id @default(autoincrement())
   /// ISO 3166-1 alpha-2 code, e.g., "PE"
-  code         String               @unique
+  code                 String               @unique
   /// Default (fallback) name, e.g., "Peru"
-  name         String               @unique
+  name                 String               @unique
   /// International phone prefix, e.g., "+51"
-  phoneCode    String?
+  phoneCode            String?
   /// Currency reference
-  currencyId   Int?
-  currency     Currency?            @relation(fields: [currencyId], references: [id])
-  regions      Region[]
-  translations CountryTranslation[]
+  currencyId           Int?
+  currency             Currency?            @relation(fields: [currencyId], references: [id])
+  regions              Region[]
+  translations         CountryTranslation[]
   /// Relations to phone
-  phones       Phone[]
+  phones               Phone[]
+  usersNationalities   User[]               @relation("UserNationality")
+  usersPassportCountry User[]               @relation("PassportCountry")
 }
 
 /// Country name translations, to show country names in different languages
