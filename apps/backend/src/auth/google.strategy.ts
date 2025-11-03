@@ -16,12 +16,20 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(
     private readonly authService: AuthService, // inject the service (AuthService) as dependencie
   ) {
+    const clientID = process.env.AUTH_GOOGLE_ID;
+    const clientSecret = process.env.AUTH_GOOGLE_SECRET;
+    const callbackURL = process.env.GOOGLE_CALLBACK_URL;
+
+    // Validate required environment variables
+    if (!clientID || !clientSecret || !callbackURL) {
+      throw new Error('Google OAuth credentials are not configured');
+    }
+
     super({
-      clientID: process.env.AUTH_GOOGLE_ID!,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL!,
-      scope: ['email', 'profile'], // the user's data that we want from Google
-      passReqToCallback: true,
+      clientID,
+      clientSecret,
+      callbackURL,
+      scope: ['email', 'profile'],
     });
   }
   // THIS'S SO IMPORTANT
