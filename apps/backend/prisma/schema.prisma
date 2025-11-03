@@ -19,6 +19,16 @@ model User {
   image    String?
   accounts Account[]
   sessions Session[]
+  phoneId  Int?
+  phone    Phone?    @relation(fields: [phoneId], references: [id])
+}
+
+model Phone {
+  id        Int     @id
+  number    String
+  countryId Int
+  country   Country @relation(fields: [countryId], references: [id])
+  users     User[]
 }
 
 model Account {
@@ -64,15 +74,15 @@ model VerificationToken {
 /// Use ISO 639-1 two-letter codes: e.g. "en", "es", "fr".
 /// This table allows linking translatable content to specific languages.
 model Language {
-  id         Int              @id @default(autoincrement())
+  id                  Int                         @id @default(autoincrement())
   /// ISO 639-1 code (unique)
   /// Example: "en"
-  code       String           @unique
+  code                String                      @unique
   /// Display name for human readability
   /// Example: "English", "Español", "日本語"
-  name       String
+  name                String
   /// Companies that use this language as default
-  companies  TourismCompany[]
+  companies           TourismCompany[]
   /// Optional translations linked to this language
   companyTranslations TourismCompanyTranslation[]
   countryTranslations CountryTranslation[]
@@ -88,7 +98,7 @@ model Language {
 /// A company may have multiple physical installations (offices, hotels, etc.)
 /// and multilingual information via the related translation table.
 model TourismCompany {
-  id                 Int                   @id @default(autoincrement())
+  id                 Int                         @id @default(autoincrement())
   /// Commercial name of the company
   name               String
   /// Legal or registered business name (optional)
@@ -107,20 +117,20 @@ model TourismCompany {
   /// Example: "2025-01-15T00:00:00.000Z"
   registerDate       DateTime
   /// Whether the company is active in the system
-  isActive           Boolean               @default(true)
+  isActive           Boolean                     @default(true)
   /// Average rating from users or agencies
   rating             Float?
   /// Default language for the company (ISO code, e.g., "en", "es")
   languageId         Int?
-  language           Language?             @relation(fields: [languageId], references: [id])
+  language           Language?                   @relation(fields: [languageId], references: [id])
   /// Locations (branches, offices, hotels, etc.)
   installations      CompanyInstallation[]
   /// Multilingual descriptions or taglines
   translations       TourismCompanyTranslation[]
   /// When the record was created
-  createdAt          DateTime              @default(now())
+  createdAt          DateTime                    @default(now())
   /// When the record was last updated
-  updatedAt          DateTime              @updatedAt
+  updatedAt          DateTime                    @updatedAt
 }
 
 /// ===============================
@@ -130,7 +140,7 @@ model TourismCompany {
 /// Stores translations for tourism companies.
 /// Only fields that vary by language are placed here (e.g. description, tagline).
 model TourismCompanyTranslation {
-  id          Int             @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   companyId   Int
   languageId  Int
   /// Description of services, history, etc. (localized)
@@ -138,8 +148,8 @@ model TourismCompanyTranslation {
   /// Short tagline or slogan (localized)
   tagline     String?
 
-  company     TourismCompany  @relation(fields: [companyId], references: [id])
-  language    Language        @relation(fields: [languageId], references: [id])
+  company  TourismCompany @relation(fields: [companyId], references: [id])
+  language Language       @relation(fields: [languageId], references: [id])
 
   @@unique([companyId, languageId]) // Ensures one translation per language per company
 }
@@ -186,29 +196,32 @@ model CompanyInstallation {
 /// Represents a country.
 /// Supports multilingual display names via CountryTranslation.
 model Country {
-  id         Int        @id @default(autoincrement())
+  id           Int                  @id @default(autoincrement())
   /// ISO 3166-1 alpha-2 code, e.g., "PE"
-  code       String
+  code         String               @unique
   /// Default (fallback) name, e.g., "Peru"
-  name       String
+  name         String               @unique
   /// International phone prefix, e.g., "+51"
-  phoneCode  String?
+  phoneCode    String?
   /// Currency reference
-  currencyId Int?
-  currency   Currency?   @relation(fields: [currencyId], references: [id])
-  regions    Region[]
+  currencyId   Int?
+  currency     Currency?            @relation(fields: [currencyId], references: [id])
+  regions      Region[]
   translations CountryTranslation[]
+  /// Relations to phone
+  phones       Phone[]
 }
 
 /// Country name translations, to show country names in different languages
 /// Example: "Germany" in English, "Deutschland" in German
 model CountryTranslation {
-  id         Int       @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   countryId  Int
   languageId Int
   name       String
-  country    Country   @relation(fields: [countryId], references: [id])
-  language   Language  @relation(fields: [languageId], references: [id])
+  country    Country  @relation(fields: [countryId], references: [id])
+  language   Language @relation(fields: [languageId], references: [id])
+
   @@unique([countryId, languageId])
 }
 
@@ -219,12 +232,12 @@ model CountryTranslation {
 /// Represents a region, state, or department.
 /// Supports multilingual names via RegionTranslation.
 model Region {
-  id        Int       @id @default(autoincrement())
-  name      String
-  code      String?
-  countryId Int
-  country   Country   @relation(fields: [countryId], references: [id])
-  cities    City[]
+  id           Int                 @id @default(autoincrement())
+  name         String
+  code         String?
+  countryId    Int
+  country      Country             @relation(fields: [countryId], references: [id])
+  cities       City[]
   translations RegionTranslation[]
 }
 
@@ -232,12 +245,13 @@ model Region {
 /// to show region names in different languages
 /// Example: "Tokyo" in English, "東京" in Japanese
 model RegionTranslation {
-  id        Int       @id @default(autoincrement())
-  regionId  Int
+  id         Int      @id @default(autoincrement())
+  regionId   Int
   languageId Int
-  name      String
-  region    Region    @relation(fields: [regionId], references: [id])
-  language  Language  @relation(fields: [languageId], references: [id])
+  name       String
+  region     Region   @relation(fields: [regionId], references: [id])
+  language   Language @relation(fields: [languageId], references: [id])
+
   @@unique([regionId, languageId])
 }
 
@@ -248,11 +262,11 @@ model RegionTranslation {
 /// Represents a city.
 /// Supports multilingual display names via CityTranslation.
 model City {
-  id          Int          @id @default(autoincrement())
-  name        String
-  regionId    Int
-  region      Region       @relation(fields: [regionId], references: [id])
-  postalCodes PostalCode[]
+  id           Int               @id @default(autoincrement())
+  name         String
+  regionId     Int
+  region       Region            @relation(fields: [regionId], references: [id])
+  postalCodes  PostalCode[]
   translations CityTranslation[]
 }
 
@@ -260,12 +274,13 @@ model City {
 /// for showing city names in different languages
 /// Example: "Tokyo" in English, "東京" in Japanese
 model CityTranslation {
-  id        Int       @id @default(autoincrement())
-  cityId    Int
+  id         Int      @id @default(autoincrement())
+  cityId     Int
   languageId Int
-  name      String
-  city      City      @relation(fields: [cityId], references: [id])
-  language  Language  @relation(fields: [languageId], references: [id])
+  name       String
+  city       City     @relation(fields: [cityId], references: [id])
+  language   Language @relation(fields: [languageId], references: [id])
+
   @@unique([cityId, languageId])
 }
 
@@ -301,4 +316,3 @@ model Currency {
   symbol    String?
   countries Country[]
 }
-
