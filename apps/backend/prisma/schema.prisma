@@ -21,6 +21,7 @@ model User {
   accounts  Account[]
   sessions  Session[]
   isActive  Boolean   @default(true) /// Whether the user is active
+  name      String
   /// When the record was created
   createdAt DateTime  @default(now())
   /// When the record was last updated
@@ -29,8 +30,8 @@ model User {
   // Personal data
   phoneId           Int?
   phone             Phone?    @relation(fields: [phoneId], references: [id])
-  firstName         String /// Exameple: John, Alvaro Raúl
-  lastName          String /// Example: Doe, Gómez Pérez
+  firstName         String? /// Exameple: John, Alvaro Raúl
+  lastName          String? /// Example: Doe, Gómez Pérez
   gender            Gender?
   dateOfBirth       DateTime? /// Example: "1990-05-20T00:00:00.000Z"
   nationalityId     Int? /// Reference to Country, also used for document number
@@ -41,8 +42,10 @@ model User {
   passportCountry   Country?  @relation(fields: [passportCountryId], references: [id], name: "PassportCountry")
 
   // Relations
-  systemAdmin  SystemAdmin?
-  companyAdmin CompanyAdmin?
+  systemAdmin    SystemAdmin?
+  companyAdmin   CompanyAdmin?
+  tourismWorkers CompanyWorker[]
+  tourist        Tourist?
 }
 
 // Global system administrator model
@@ -63,6 +66,39 @@ model CompanyAdmin {
   tourismCompanyId Int
 }
 
+model Tourist {
+  id               Int       @id @default(autoincrement())
+  userId           String    @unique
+  languageId       Int? /// Preferred language ID
+  currencyId       Int? /// Preferred currency ID
+  emergencyPhoneId Int? /// Emergency contact phone number
+  // Relations
+  user             User      @relation(fields: [userId], references: [id])
+  language         Language? @relation(fields: [languageId], references: [id])
+  currency         Currency? @relation(fields: [currencyId], references: [id])
+  emergencyPhone   Phone?    @relation(fields: [emergencyPhoneId], references: [id])
+}
+
+model CompanyWorker {
+  id        Int     @id @default(autoincrement())
+  userId    String
+  companyId Int
+  role      String?
+  isActive  Boolean @default(true)
+
+  user        User           @relation(fields: [userId], references: [id])
+  company     TourismCompany @relation(fields: [companyId], references: [id])
+  permissions Permission[]   @relation("WorkerPermissions")
+
+  @@unique([userId, companyId])
+}
+
+model Permission {
+  id      Int             @id @default(autoincrement())
+  name    String          @unique /// e.g. "CREATE_PACKAGE", "VIEW_BOOKINGS"
+  workers CompanyWorker[] @relation("WorkerPermissions")
+}
+
 enum Gender {
   MALE /// Masculino
   FEMALE /// Femenino  
@@ -70,11 +106,12 @@ enum Gender {
 }
 
 model Phone {
-  id        Int     @id
+  id        Int       @id
   number    String
   countryId Int
-  country   Country @relation(fields: [countryId], references: [id])
+  country   Country   @relation(fields: [countryId], references: [id])
   users     User[]
+  tourists  Tourist[]
 }
 
 model Account {
@@ -134,6 +171,7 @@ model Language {
   countryTranslations CountryTranslation[]
   regionTranslations  RegionTranslation[]
   cityTranslations    CityTranslation[]
+  tourist             Tourist[]
 }
 
 /// ===============================
@@ -179,6 +217,7 @@ model TourismCompany {
   updatedAt          DateTime                    @updatedAt
   adminId            Int
   admin              CompanyAdmin                @relation(fields: [adminId], references: [id])
+  workers            CompanyWorker[]
 }
 
 /// ===============================
@@ -365,4 +404,5 @@ model Currency {
   /// Symbol used, e.g., "S/"
   symbol    String?
   countries Country[]
+  tourists  Tourist[]
 }
