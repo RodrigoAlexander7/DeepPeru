@@ -21,6 +21,7 @@ model User {
   accounts  Account[]
   sessions  Session[]
   isActive  Boolean   @default(true) /// Whether the user is active
+  name      String
   /// When the record was created
   createdAt DateTime  @default(now())
   /// When the record was last updated
@@ -29,8 +30,8 @@ model User {
   // Personal data
   phoneId           Int?
   phone             Phone?    @relation(fields: [phoneId], references: [id])
-  firstName         String /// Exameple: John, Alvaro Raúl
-  lastName          String /// Example: Doe, Gómez Pérez
+  firstName         String? /// Exameple: John, Alvaro Raúl
+  lastName          String? /// Example: Doe, Gómez Pérez
   gender            Gender?
   dateOfBirth       DateTime? /// Example: "1990-05-20T00:00:00.000Z"
   nationalityId     Int? /// Reference to Country, also used for document number
