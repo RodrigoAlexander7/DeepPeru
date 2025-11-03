@@ -10,7 +10,7 @@ export class AuthService {
     private readonly usersService: UsersService,
   ) {}
 
-  //we dont use access token nor refresh tken
+  //we dont use access token nor refresh tken, we create our own jwt
   async callbackOauthGoogle({ name, email, image, accessToken, refreshToken }) {
     console.log('EMAIL RECIBIDO:', email);
     if (!email) throw new UnauthorizedException('Email not found from Google');
