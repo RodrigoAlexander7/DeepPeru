@@ -15,7 +15,8 @@ export class UsersService {
          data: {
             name,
             email,
-            image
+            image,
+            updatedAt: new Date()
          }
       })
    }

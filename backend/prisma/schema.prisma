@@ -8,12 +8,29 @@ datasource db {
 }
 
 model User {
-  id       String    @id @default(cuid())
-  name     String?
-  email    String?   @unique
-  image    String?
-  accounts Account[]
-  sessions Session[]
+  id                                      String        @id @default(cuid())
+  name                                    String?
+  email                                   String?       @unique
+  image                                   String?
+  isActive                                Boolean       @default(true)
+  phoneId                                 Int?
+  createdAt                               DateTime      @default(now())
+  dateOfBirth                             DateTime?
+  documentNumber                          String?
+  firstName                               String?
+  gender                                  Gender?
+  lastName                                String?
+  nationalityId                           Int?
+  passportCountryId                       Int?
+  passportNumber                          String?       @unique
+  updatedAt                               DateTime
+  accounts                                Account[]
+  CompanyAdmin                            CompanyAdmin?
+  sessions                                Session[]
+  SystemAdmin                             SystemAdmin?
+  Country_User_nationalityIdToCountry     Country?      @relation("User_nationalityIdToCountry", fields: [nationalityId], references: [id])
+  Country_User_passportCountryIdToCountry Country?      @relation("User_passportCountryIdToCountry", fields: [passportCountryId], references: [id])
+  Phone                                   Phone?        @relation(fields: [phoneId], references: [id])
 }
 
 model Account {
@@ -22,15 +39,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -49,4 +65,176 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model City {
+  id              Int               @id @default(autoincrement())
+  name            String
+  regionId        Int
+  Region          Region            @relation(fields: [regionId], references: [id])
+  CityTranslation CityTranslation[]
+  PostalCode      PostalCode[]
+}
+
+model CityTranslation {
+  id         Int      @id @default(autoincrement())
+  cityId     Int
+  languageId Int
+  name       String
+  City       City     @relation(fields: [cityId], references: [id])
+  Language   Language @relation(fields: [languageId], references: [id])
+
+  @@unique([cityId, languageId])
+}
+
+model CompanyAdmin {
+  id               Int              @id @default(autoincrement())
+  userId           String           @unique
+  createdAt        DateTime         @default(now())
+  tourismCompanyId Int
+  User             User             @relation(fields: [userId], references: [id])
+  TourismCompany   TourismCompany[]
+}
+
+model CompanyInstallation {
+  id             Int            @id @default(autoincrement())
+  name           String
+  address        String
+  latitude       Float
+  longitude      Float
+  postalCodeId   Int?
+  companyId      Int
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime
+  TourismCompany TourismCompany @relation(fields: [companyId], references: [id])
+  PostalCode     PostalCode?    @relation(fields: [postalCodeId], references: [id])
+}
+
+model Country {
+  id                                   Int                  @id @default(autoincrement())
+  code                                 String               @unique
+  name                                 String               @unique
+  phoneCode                            String?
+  currencyId                           Int?
+  Currency                             Currency?            @relation(fields: [currencyId], references: [id])
+  CountryTranslation                   CountryTranslation[]
+  Phone                                Phone[]
+  Region                               Region[]
+  User_User_nationalityIdToCountry     User[]               @relation("User_nationalityIdToCountry")
+  User_User_passportCountryIdToCountry User[]               @relation("User_passportCountryIdToCountry")
+}
+
+model CountryTranslation {
+  id         Int      @id @default(autoincrement())
+  countryId  Int
+  languageId Int
+  name       String
+  Country    Country  @relation(fields: [countryId], references: [id])
+  Language   Language @relation(fields: [languageId], references: [id])
+
+  @@unique([countryId, languageId])
+}
+
+model Currency {
+  id      Int       @id @default(autoincrement())
+  name    String
+  code    String
+  symbol  String?
+  Country Country[]
+}
+
+model Language {
+  id                        Int                         @id @default(autoincrement())
+  code                      String                      @unique
+  name                      String
+  CityTranslation           CityTranslation[]
+  CountryTranslation        CountryTranslation[]
+  RegionTranslation         RegionTranslation[]
+  TourismCompany            TourismCompany[]
+  TourismCompanyTranslation TourismCompanyTranslation[]
+}
+
+model Phone {
+  id        Int     @id
+  number    String
+  countryId Int
+  Country   Country @relation(fields: [countryId], references: [id])
+  User      User[]
+}
+
+model PostalCode {
+  id                  Int                   @id @default(autoincrement())
+  code                String
+  cityId              Int
+  CompanyInstallation CompanyInstallation[]
+  City                City                  @relation(fields: [cityId], references: [id])
+}
+
+model Region {
+  id                Int                 @id @default(autoincrement())
+  name              String
+  code              String?
+  countryId         Int
+  City              City[]
+  Country           Country             @relation(fields: [countryId], references: [id])
+  RegionTranslation RegionTranslation[]
+}
+
+model RegionTranslation {
+  id         Int      @id @default(autoincrement())
+  regionId   Int
+  languageId Int
+  name       String
+  Language   Language @relation(fields: [languageId], references: [id])
+  Region     Region   @relation(fields: [regionId], references: [id])
+
+  @@unique([regionId, languageId])
+}
+
+model SystemAdmin {
+  id        Int      @id @default(autoincrement())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+model TourismCompany {
+  id                        Int                         @id @default(autoincrement())
+  name                      String
+  legalName                 String?
+  registrationNumber        String?
+  email                     String
+  phone                     String
+  websiteUrl                String?
+  logoUrl                   String?
+  registerDate              DateTime
+  isActive                  Boolean                     @default(true)
+  rating                    Float?
+  languageId                Int?
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime
+  adminId                   Int
+  CompanyInstallation       CompanyInstallation[]
+  CompanyAdmin              CompanyAdmin                @relation(fields: [adminId], references: [id])
+  Language                  Language?                   @relation(fields: [languageId], references: [id])
+  TourismCompanyTranslation TourismCompanyTranslation[]
+}
+
+model TourismCompanyTranslation {
+  id             Int            @id @default(autoincrement())
+  companyId      Int
+  languageId     Int
+  description    String?
+  tagline        String?
+  TourismCompany TourismCompany @relation(fields: [companyId], references: [id])
+  Language       Language       @relation(fields: [languageId], references: [id])
+
+  @@unique([companyId, languageId])
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  UNKN
 }
