@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { authService } from '@/features/auth/auth.service';
+import { authService } from '@/features/auth/services/auth.service';
 
 type User = { id: string; name: string; email: string; image?: string };
 

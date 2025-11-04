@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { authService } from '@/features/auth/auth.service';
+import { authService } from '@/features/auth/services/auth.service';
 
 export default function GoogleSessionPill() {
   return (
