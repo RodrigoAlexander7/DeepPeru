@@ -172,6 +172,12 @@ model Language {
   regionTranslations  RegionTranslation[]
   cityTranslations    CityTranslation[]
   tourist             Tourist[]
+
+  TouristPackage TouristPackage[]
+
+  TouristPackageTranslation TouristPackageTranslation[]
+
+  PackageLanguage PackageLanguage[]
 }
 
 /// ===============================
@@ -218,6 +224,8 @@ model TourismCompany {
   adminId            Int
   admin              CompanyAdmin                @relation(fields: [adminId], references: [id])
   workers            CompanyWorker[]
+
+  TouristPackage TouristPackage[]
 }
 
 /// ===============================
@@ -405,4 +413,438 @@ model Currency {
   symbol    String?
   countries Country[]
   tourists  Tourist[]
+
+  PricingOption PricingOption[]
+}
+
+/// ===============================
+/// Tourist Package Table (normalized)
+/// ===============================
+
+/// Represents a tourist package offered by a company.
+/// Includes metadata, relations, pricing, schedules, and multilingual content.
+/// Standards:
+/// - Date/time: ISO 8601 (e.g., "2025-01-15T10:00:00Z").
+/// - Durations: ISO 8601 Duration (e.g., "PT2H30M").
+/// - Time zone: IANA Time Zone (e.g., "America/Lima").
+/// - Currency: ISO 4217 (Currency table).
+model TouristPackage {
+  id        Int            @id @default(autoincrement())
+  /// Company offering the package
+  companyId Int
+  company   TourismCompany @relation(fields: [companyId], references: [id])
+
+  /// Default name (fallback when no translation is available)
+  name        String
+  /// Default description (fallback)
+  description String?
+
+  /// Total tour duration (ISO 8601 Duration, e.g., "P1D" or "PT6H")
+  duration String?
+
+  /// Package type (private, group, self-guided)
+  type       PackageType      @default(GROUP)
+  /// Physical difficulty level
+  difficulty DifficultyLevel?
+
+  /// Default content language (ISO 639-1)
+  languageId     Int?
+  language       Language?         @relation(fields: [languageId], references: [id])
+  /// Languages offered for guiding/operation
+  guideLanguages PackageLanguage[]
+
+  /// Average rating
+  rating   Float?
+  /// Publication/sale status
+  isActive Boolean @default(true)
+
+  /// Age restrictions
+  minAge Int?
+  maxAge Int?
+
+  /// Group size constraints
+  minParticipants Int?
+  maxParticipants Int?
+
+  /// Meeting point (free text)
+  meetingPoint     String?
+  /// Meeting point coordinates (WGS84)
+  meetingLatitude  Float?
+  meetingLongitude Float?
+
+  /// End point (free text)
+  endPoint     String?
+  /// End point coordinates (WGS84)
+  endLatitude  Float?
+  endLongitude Float?
+
+  /// Time zone for schedules (IANA, e.g., "America/Lima")
+  timezone String?
+
+  /// Minimum advance booking time (ISO 8601 Duration, e.g., "PT24H")
+  bookingCutoff String?
+
+  /// Requirements (documents, clothing, etc.)
+  requirements       String[]
+  /// Safety information
+  safetyInfo         String?
+  /// Additional information
+  additionalInfo     String?
+  /// Cancellation policy (text)
+  cancellationPolicy String?
+  /// Cancellation policy type
+  cancellationType   CancellationPolicyType?
+
+  /// Included/excluded items
+  includedItems String[]
+  excludedItems String[]
+
+  /// Package highlights/benefits
+  benefits             Benefit[]
+  /// Detailed features of the package
+  features             Feature[]
+  /// Itineraries (supports multiple variations)
+  itineraries          Itinerary[]
+  /// Pickup details (hotel, radius, time window)
+  pickupDetails        PickupDetail[]
+  /// Accessibility options (enum list)
+  accessibilityOptions AccessibilityFeature[]
+
+  /// Media (images, videos, documents)
+  media          Media[]
+  /// Price options (by age, private/group, validity)
+  pricingOptions PricingOption[]
+  /// Recurring schedules/shifts
+  schedules      Schedule[]
+
+  /// Translations by language
+  translations TouristPackageTranslation[]
+
+  /// Audit timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+/// ===============================
+/// Enums for Tourist Packages
+/// ===============================
+
+/// Package type
+enum PackageType {
+  GROUP /// Shared group service
+  PRIVATE /// Private service
+  SELF_GUIDED /// Self-guided (no guide)
+}
+
+/// Physical difficulty level (indicative)
+enum DifficultyLevel {
+  EASY /// Easy (suitable for most)
+  MODERATE /// Moderate
+  CHALLENGING /// Challenging
+  HARD /// Hard
+}
+
+/// Accessibility features (non-exhaustive list)
+enum AccessibilityFeature {
+  WHEELCHAIR_ACCESSIBLE /// Wheelchair accessible
+  STROLLER_ACCESSIBLE /// Stroller accessible
+  SERVICE_ANIMALS_ALLOWED /// Service animals allowed
+  AUDIO_GUIDE_AVAILABLE /// Audio guide available
+  SIGN_LANGUAGE_AVAILABLE /// Sign language available
+  LARGE_PRINT_MATERIAL /// Large print material
+  ASSISTIVE_LISTENING_SYSTEM /// Assistive listening system
+  BRAILLE_MATERIAL /// Braille material
+  STEP_FREE_ACCESS /// Step-free access
+  ELEVATOR_AVAILABLE /// Elevator available
+  ACCESSIBLE_TOILET /// Accessible restroom
+}
+
+/// Cancellation policy type
+enum CancellationPolicyType {
+  FLEXIBLE /// Broad refunds with short notice
+  MODERATE /// Refunds with medium notice
+  STRICT /// Refunds with long notice
+  NON_REFUNDABLE /// Non-refundable
+}
+
+/// Days of week for recurring schedules
+enum DayOfWeek {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+/// Media type associated with the package
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+/// ===============================
+/// Benefit (highlights)
+/// ===============================
+
+/// Individual package benefit (icon, title, text).
+model Benefit {
+  id        Int            @id @default(autoincrement())
+  packageId Int
+  package   TouristPackage @relation(fields: [packageId], references: [id])
+
+  /// Icon URL (SVG/PNG)
+  iconUrl   String?
+  /// Benefit title
+  title     String
+  /// Descriptive text
+  text      String?
+  /// Display order
+  order     Int?
+  createdAt DateTime @default(now())
+
+  @@index([packageId])
+}
+
+/// ===============================
+/// Feature (detailed characteristics)
+/// ===============================
+
+/// Package feature (name, icon, description, category).
+model Feature {
+  id        Int            @id @default(autoincrement())
+  packageId Int
+  package   TouristPackage @relation(fields: [packageId], references: [id])
+
+  /// Feature category (e.g., "Transport", "Lodging")
+  category    String?
+  /// Icon URL
+  iconUrl     String?
+  /// Feature name
+  name        String
+  /// Extended description
+  description String?
+  /// Display order
+  order       Int?
+  createdAt   DateTime @default(now())
+
+  @@index([packageId])
+}
+
+/// ===============================
+/// Itinerary (days/activities structure)
+//  ===============================
+
+/// Package itinerary (can vary by season).
+model Itinerary {
+  id        Int            @id @default(autoincrement())
+  packageId Int
+  package   TouristPackage @relation(fields: [packageId], references: [id])
+
+  /// Itinerary title (e.g., "3-day Itinerary")
+  title String?
+  /// Total number of days
+  days  Int?
+  /// Items (day/activity)
+  items ItineraryItem[]
+
+  createdAt DateTime @default(now())
+
+  @@index([packageId])
+}
+
+/// Itinerary item with day, time, and location.
+/// Notes:
+/// - startTime/endTime as ISO 8601 time "HH:mm" (24h).
+/// - Coordinates in WGS84.
+model ItineraryItem {
+  id          Int       @id @default(autoincrement())
+  itineraryId Int
+  itinerary   Itinerary @relation(fields: [itineraryId], references: [id])
+
+  /// Relative day (starting at 1)
+  dayNumber   Int
+  /// Activity/stop title
+  title       String
+  /// Activity description
+  description String?
+
+  /// Start time (ISO 8601 "HH:mm")
+  startTime String?
+  /// End time (ISO 8601 "HH:mm")
+  endTime   String?
+
+  /// Textual location
+  location  String?
+  /// Coordinates (WGS84)
+  latitude  Float?
+  longitude Float?
+
+  /// Order within the day
+  order Int?
+
+  @@index([itineraryId])
+  @@index([dayNumber])
+}
+
+/// ===============================
+/// Pickup Details
+/// ===============================
+
+/// Pickup/return details (hotel, radius, time window).
+/// Times in ISO 8601 "HH:mm".
+model PickupDetail {
+  id        Int            @id @default(autoincrement())
+  packageId Int
+  package   TouristPackage @relation(fields: [packageId], references: [id])
+
+  /// Whether hotel pickup is offered
+  isHotelPickupAvailable Boolean @default(false)
+  /// Pickup radius in km
+  pickupRadiusKm         Float?
+  /// Pickup area description
+  pickupAreaDescription  String?
+
+  /// Pickup time window (start/end)
+  pickupStartTime String?
+  pickupEndTime   String?
+
+  /// Specific instructions
+  instructions String?
+
+  @@index([packageId])
+}
+
+/// ===============================
+/// Media (images/videos/documents)
+/// ===============================
+
+/// Media attached to the package.
+/// URLs should be stable (CDN/HTTPS).
+model Media {
+  id        Int            @id @default(autoincrement())
+  packageId Int
+  package   TouristPackage @relation(fields: [packageId], references: [id])
+
+  type      MediaType @default(IMAGE)
+  url       String
+  caption   String?
+  order     Int?
+  isPrimary Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@index([packageId])
+}
+
+/// ===============================
+/// Pricing Options
+/// ===============================
+
+/// Price options by segment (adult/child/private group).
+/// Standards:
+/// - Currency: ISO 4217 (Currency table).
+/// - Validity windows in ISO 8601 DateTime.
+model PricingOption {
+  id        Int            @id @default(autoincrement())
+  packageId Int
+  package   TouristPackage @relation(fields: [packageId], references: [id])
+
+  /// Rate name (e.g., "Adult", "Child", "Private")
+  name        String
+  description String?
+
+  /// Currency (ISO 4217)
+  currencyId Int
+  currency   Currency @relation(fields: [currencyId], references: [id])
+
+  /// Amount in currency units (Decimal for accuracy)
+  amount Decimal @db.Decimal(12, 2)
+
+  /// True if price is per person; false if per group
+  perPerson Boolean @default(true)
+
+  /// Group constraints (if applicable)
+  minParticipants Int?
+  maxParticipants Int?
+
+  /// Validity window
+  validFrom DateTime?
+  validTo   DateTime?
+
+  /// Active status
+  isActive Boolean @default(true)
+
+  @@index([packageId])
+  @@index([currencyId])
+}
+
+/// ===============================
+/// Schedules
+/// ===============================
+
+/// Recurring package schedules.
+/// - daysOfWeek: active days.
+/// - startTime/endTime: ISO 8601 time "HH:mm".
+/// - timezone: IANA TZ (e.g., "America/Lima").
+model Schedule {
+  id        Int            @id @default(autoincrement())
+  packageId Int
+  package   TouristPackage @relation(fields: [packageId], references: [id])
+
+  timezone   String
+  daysOfWeek DayOfWeek[]
+  startTime  String
+  endTime    String?
+  notes      String?
+
+  @@index([packageId])
+}
+
+/// ===============================
+/// Translations (multilingual content)
+/// ===============================
+
+/// Translations of variable content per language.
+/// Language: ISO 639-1 (Language table).
+model TouristPackageTranslation {
+  id         Int @id @default(autoincrement())
+  packageId  Int
+  languageId Int
+
+  name               String?
+  description        String?
+  meetingPoint       String?
+  endPoint           String?
+  additionalInfo     String?
+  cancellationPolicy String?
+
+  /// Localized lists
+  requirements  String[]
+  includedItems String[]
+  excludedItems String[]
+
+  package  TouristPackage @relation(fields: [packageId], references: [id])
+  language Language       @relation(fields: [languageId], references: [id])
+
+  @@unique([packageId, languageId])
+}
+
+/// ===============================
+/// Guide languages (M:N with Language)
+/// ===============================
+
+/// Languages in which the tour is guided/operated.
+/// ISO 639-1 referenced from Language.
+model PackageLanguage {
+  packageId  Int
+  languageId Int
+
+  package  TouristPackage @relation(fields: [packageId], references: [id])
+  language Language       @relation(fields: [languageId], references: [id])
+
+  @@id([packageId, languageId])
 }
