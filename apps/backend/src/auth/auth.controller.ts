@@ -28,6 +28,7 @@ export class AuthController {
 
     try {
       const { accessToken } = await this.authService.callbackOauthGoogle(
+        // this req is the one modified by passport with the user info -> see comments in google.strategy.ts
         req.user,
       );
 
