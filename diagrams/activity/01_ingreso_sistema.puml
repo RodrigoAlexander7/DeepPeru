@@ -1,0 +1,21 @@
+@startuml
+title Ingreso al sitio oficial
+
+start
+
+:Usuario googlea la página web;
+
+:Usuario da click en la opción de Sitio oficial;
+
+:El sistema muestra la vista principal\ncon opción para iniciar búsqueda;
+
+if (¿Usuario está autenticado?) then (Sí)
+  :Se muestra los items de la interfaz con su información\ncomo nombre o imagen de perfil;
+else (No)
+  :No muestra los datos del usuario y\npone un ícono genérico para la imágen de perfil;
+endif 
+
+stop
+
+
+@enduml
