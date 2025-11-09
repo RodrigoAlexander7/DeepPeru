@@ -10,7 +10,7 @@ req contains:
    - req.headers -> the headers HTTP 
    - req.ip      -> the ip of the client (if it has one)
 */
-export function middleware(req: NextRequest) {
+export function authMiddleware(req: NextRequest) {
   const token = req.cookies.get('access_token')?.value;
 
   const { pathname } = req.nextUrl;
