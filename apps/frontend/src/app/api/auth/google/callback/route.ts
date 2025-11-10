@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     // we use await cause cookies is async on nextjs, in middleware not
     const cookiesStore = await cookies();
     cookiesStore.set({
-      name: 'auth_token',
+      name: 'access_token',
       value: token,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
