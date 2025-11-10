@@ -1,0 +1,44 @@
+@startuml
+title Creación de compañía de turismo
+
+'Vistas
+!define LOGIN "Iniciar sesión"
+!define CREATE_OPERATOR "Registro como operador"
+!define CREATE_COMP "Crear compañías"
+
+start
+
+:Usuario ingresa a la página oficial;
+
+:Usuario da click a la opción de "Registrar my empresa de turismo";
+
+if (¿Usuario no está autenticado?) then (Sí)
+  :Redirigir a vista de LOGIN;
+  :Registrar a usuario;
+endif
+
+if (¿Usuario ya tiene cuenta de\nadministrador de empresa?) then (Sí) 
+
+else
+  :Redirigir a vista de CREATE_OPERATOR;
+  :El usuario completa el formulario;
+endif
+
+:Redirigir a vista de CREATE_COMP;
+:Mostrar cantidad de empresas que administra;
+note
+  Si no creó ninguna, poner 
+  un aviso de crear la primera
+  o de agregar una más
+endnote
+if (¿Desea añadir más empresas?) then (Sí)
+  :Mostrar el formulario para registrar compañia;
+else 
+  stop;
+endif
+
+stop
+
+
+@enduml
+
