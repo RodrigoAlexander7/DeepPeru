@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// User Table with extended personal data
+/// User Table with ext ended personal data
 /// - Leagal identity fields are not required when the user is a tourist
 model User {
   id                String          @id @default(cuid())
