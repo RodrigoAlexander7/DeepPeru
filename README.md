@@ -1,5 +1,7 @@
 # DeepPeru
 
+Sistema intermedio para promoción de paquetes turísticos.
+
 ## Requisitos
 
 - Node.js 18+
