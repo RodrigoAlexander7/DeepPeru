@@ -113,21 +113,41 @@ async function createData() {
   ]);
 
   // Cities
-  const [limaCity, cuscoCity] = await prisma.$transaction([
-    prisma.city.create({ data: { name: 'Lima', regionId: limaRegion.id } }),
-    prisma.city.create({ data: { name: 'Cusco', regionId: cuscoRegion.id } }),
-  ]);
+  const limaCity =
+    (await prisma.city.findFirst({ where: { name: 'Lima', regionId: limaRegion.id } })) ??
+    (await prisma.city.create({ data: { name: 'Lima', regionId: limaRegion.id } }));
+  const cuscoCity =
+    (await prisma.city.findFirst({ where: { name: 'Cusco', regionId: cuscoRegion.id } })) ??
+    (await prisma.city.create({ data: { name: 'Cusco', regionId: cuscoRegion.id } }));
 
-  // City Translations
+  // City Translations (idempotent)
   await prisma.$transaction([
-    prisma.cityTranslation.create({ data: { cityId: limaCity.id, languageId: en.id, name: 'Lima' } }),
-    prisma.cityTranslation.create({ data: { cityId: limaCity.id, languageId: es.id, name: 'Lima' } }),
-    prisma.cityTranslation.create({ data: { cityId: cuscoCity.id, languageId: en.id, name: 'Cusco' } }),
-    prisma.cityTranslation.create({ data: { cityId: cuscoCity.id, languageId: es.id, name: 'Cusco' } }),
+    prisma.cityTranslation.upsert({
+      where: { cityId_languageId: { cityId: limaCity.id, languageId: en.id } },
+      update: { name: 'Lima' },
+      create: { cityId: limaCity.id, languageId: en.id, name: 'Lima' },
+    }),
+    prisma.cityTranslation.upsert({
+      where: { cityId_languageId: { cityId: limaCity.id, languageId: es.id } },
+      update: { name: 'Lima' },
+      create: { cityId: limaCity.id, languageId: es.id, name: 'Lima' },
+    }),
+    prisma.cityTranslation.upsert({
+      where: { cityId_languageId: { cityId: cuscoCity.id, languageId: en.id } },
+      update: { name: 'Cusco' },
+      create: { cityId: cuscoCity.id, languageId: en.id, name: 'Cusco' },
+    }),
+    prisma.cityTranslation.upsert({
+      where: { cityId_languageId: { cityId: cuscoCity.id, languageId: es.id } },
+      update: { name: 'Cusco' },
+      create: { cityId: cuscoCity.id, languageId: es.id, name: 'Cusco' },
+    }),
   ]);
 
-  // Postal Code
-  const limaPostal = await prisma.postalCode.create({ data: { code: '15000', cityId: limaCity.id } });
+  // Postal Code (find-or-create)
+  const limaPostal =
+    (await prisma.postalCode.findFirst({ where: { code: '15000', cityId: limaCity.id } })) ??
+    (await prisma.postalCode.create({ data: { code: '15000', cityId: limaCity.id } }));
 
   // Phones (ensure unique IDs without collisions)
   const userPhone = await ensurePhone('+51 999-111-222', peru.id);
@@ -260,6 +280,29 @@ async function createData() {
     create: { userId: touristUser.id, languageId: es.id, currencyId: usd.id, emergencyPhoneId: emergencyPhone.id },
   });
 
+  // Helper: set representative city via raw SQL (bypasses stale client types)
+  async function setRepresentativeCity(packageId: number, cityId: number) {
+    await prisma.$executeRaw`UPDATE "TouristPackage" SET "representativeCityId" = ${cityId} WHERE "id" = ${packageId}`;
+  }
+
+  // Helpers for PackageLocation via raw SQL
+  async function clearPackageLocations(packageId: number) {
+    await prisma.$executeRaw`DELETE FROM "PackageLocation" WHERE "packageId" = ${packageId}`;
+  }
+  async function upsertPackageLocation(
+    packageId: number,
+    cityId: number,
+    ord: number,
+    notes: string | null
+  ) {
+    await prisma.$executeRaw`
+      INSERT INTO "PackageLocation" ("packageId","cityId","order","notes","createdAt")
+      VALUES (${packageId}, ${cityId}, ${ord}, ${notes}, ${new Date()})
+      ON CONFLICT ("packageId","cityId")
+      DO UPDATE SET "order" = EXCLUDED."order", "notes" = EXCLUDED."notes"
+    `;
+  }
+
   // Tourist Package (find-or-create by company + name)
   let pkg = await prisma.touristPackage.findFirst({ where: { companyId: company.id, name: 'Machu Picchu Full Day' } });
   if (!pkg) {
@@ -280,30 +323,35 @@ async function createData() {
         maxParticipants: 16,
         meetingPoint: 'Cusco Main Square',
         meetingLatitude: -13.5167,
-        meetingLongitude: -71.9780,
+        meetingLongitude: -71.978,
         endPoint: 'Cusco Train Station',
         endLatitude: -13.5281,
-        endLongitude: -71.9440,
+        endLongitude: -71.944,
         timezone: 'America/Lima',
         bookingCutoff: '24h before start',
         requirements: ['Valid passport', 'Comfortable shoes'],
         safetyInfo: 'Altitude sickness possible; stay hydrated.',
         additionalInfo: 'Bring sunscreen and a hat.',
         cancellationPolicy: 'Free cancellation up to 48h before departure.',
-        cancellationType: 'FLEXIBLE',
-        includedItems: ['Professional guide', 'Train tickets', 'Entrance tickets'],
-        excludedItems: ['Meals', 'Tips'],
-        accessibilityOptions: ['WHEELCHAIR_ACCESSIBLE'],
         updatedAt: new Date(),
       },
     });
+    // Set representative city after create
+    await setRepresentativeCity(pkg.id, cuscoCity.id);
+  } else {
+    // Update timestamp and set representative city
+    await prisma.touristPackage.update({
+      where: { id: pkg.id },
+      data: { updatedAt: new Date() },
+    });
+    await setRepresentativeCity(pkg.id, cuscoCity.id);
   }
 
   // Package Languages (idempotent)
   await prisma.packageLanguage.upsert({ where: { packageId_languageId: { packageId: pkg.id, languageId: en.id } }, update: {}, create: { packageId: pkg.id, languageId: en.id } });
   await prisma.packageLanguage.upsert({ where: { packageId_languageId: { packageId: pkg.id, languageId: es.id } }, update: {}, create: { packageId: pkg.id, languageId: es.id } });
 
-  // Package Translations (idempotent)
+  // Package Translations (idempotent) - remove additionalInfo (not in translation schema)
   await prisma.touristPackageTranslation.upsert({
     where: { packageId_languageId: { packageId: pkg.id, languageId: en.id } },
     update: {
@@ -311,7 +359,6 @@ async function createData() {
       description: 'Experience the wonder of Machu Picchu in a full-day guided tour.',
       meetingPoint: 'Cusco Main Square',
       endPoint: 'Cusco Train Station',
-      additionalInfo: 'Bring sunscreen and a hat.',
       cancellationPolicy: 'Free cancellation up to 48h before departure.',
       requirements: ['Valid passport', 'Comfortable shoes'],
       includedItems: ['Professional guide', 'Train tickets', 'Entrance tickets'],
@@ -324,7 +371,6 @@ async function createData() {
       description: 'Experience the wonder of Machu Picchu in a full-day guided tour.',
       meetingPoint: 'Cusco Main Square',
       endPoint: 'Cusco Train Station',
-      additionalInfo: 'Bring sunscreen and a hat.',
       cancellationPolicy: 'Free cancellation up to 48h before departure.',
       requirements: ['Valid passport', 'Comfortable shoes'],
       includedItems: ['Professional guide', 'Train tickets', 'Entrance tickets'],
@@ -338,7 +384,6 @@ async function createData() {
       description: 'Vive la maravilla de Machu Picchu en un tour guiado de día completo.',
       meetingPoint: 'Plaza de Armas de Cusco',
       endPoint: 'Estación de tren de Cusco',
-      additionalInfo: 'Trae bloqueador y sombrero.',
       cancellationPolicy: 'Cancelación gratuita hasta 48h antes de la salida.',
       requirements: ['Pasaporte válido', 'Zapatos cómodos'],
       includedItems: ['Guía profesional', 'Boletos de tren', 'Entradas'],
@@ -351,7 +396,6 @@ async function createData() {
       description: 'Vive la maravilla de Machu Picchu en un tour guiado de día completo.',
       meetingPoint: 'Plaza de Armas de Cusco',
       endPoint: 'Estación de tren de Cusco',
-      additionalInfo: 'Trae bloqueador y sombrero.',
       cancellationPolicy: 'Cancelación gratuita hasta 48h antes de la salida.',
       requirements: ['Pasaporte válido', 'Zapatos cómodos'],
       includedItems: ['Guía profesional', 'Boletos de tren', 'Entradas'],
@@ -408,12 +452,16 @@ async function createData() {
       packageId: pkg.id,
       isHotelPickupAvailable: true,
       pickupRadiusKm: 5,
-      pickupAreaDescription: 'Cusco historical center hotels',
       pickupStartTime: '04:30',
       pickupEndTime: '05:00',
       instructions: 'Be ready in the lobby 10 minutes before pickup time',
     },
   });
+
+  // Normalized itinerary locations (idempotent) - raw SQL instead of delegate
+  await clearPackageLocations(pkg.id);
+  await upsertPackageLocation(pkg.id, cuscoCity.id, 1, 'Start and main visit');
+  await upsertPackageLocation(pkg.id, limaCity.id, 2, 'Connection through Lima (optional)');
 
   // Pricing (idempotent)
   await prisma.pricingOption.deleteMany({ where: { packageId: pkg.id } });
@@ -471,6 +519,8 @@ async function deleteData() {
   await prisma.pricingOption.deleteMany();
   await prisma.schedule.deleteMany();
   await prisma.touristPackageTranslation.deleteMany();
+  // Remove normalized locations before packages (raw SQL)
+  await prisma.$executeRaw`DELETE FROM "PackageLocation"`;
   await prisma.touristPackage.deleteMany();
 
   await prisma.companyInstallation.deleteMany();
