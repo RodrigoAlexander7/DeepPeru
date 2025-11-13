@@ -115,11 +115,11 @@ export default function SearchBar() {
   };
 
   return (
-    <div className="bg-black/30 backdrop-blur-sm rounded-full p-2 flex items-center gap-2 flex-wrap md:flex-nowrap max-w-4xl mx-auto">
+    <div className="bg-white rounded-full p-2 flex items-center gap-2 flex-wrap md:flex-nowrap max-w-4xl mx-auto shadow-lg">
       {/* Destination */}
-      <div className="flex items-center gap-2 px-4 flex-1 min-w-[200px]">
+      <div className="flex items-center gap-2 px-4 flex-1 min-w-[200px] group">
         <svg
-          className="w-5 h-5 text-white/70"
+          className="w-5 h-5 text-gray-600 group-hover:text-red-500 transition-colors"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -137,27 +137,32 @@ export default function SearchBar() {
             d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
           />
         </svg>
+
         <input
           type="text"
           placeholder="Destino"
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
-          className="flex-1 outline-none bg-transparent text-white placeholder-white/70"
+          className="flex-1 outline-none bg-transparent 
+                    text-black placeholder-gray-500
+                    group-hover:text-red-500 
+                    group-hover:placeholder-red-500
+                    transition-colors"
         />
       </div>
 
       {/* Date Range Picker */}
       <div
-        className="relative flex-1 min-w-[350px] border-l border-white/30"
+        className="relative flex-1 min-w-[350px] border-l border-gray-200"
         ref={datePickerRef}
       >
         <button
           type="button"
           onClick={() => setShowDatePicker(!showDatePicker)}
-          className="flex items-center gap-2 px-4 w-full text-left"
+          className="flex items-center gap-2 px-4 w-full text-left text-black hover:text-red-500 transition-colors group"
         >
           <svg
-            className="w-5 h-5 text-white/70"
+            className="w-5 h-5 text-gray-600 group-hover:text-red-500 transition-colors"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -169,12 +174,9 @@ export default function SearchBar() {
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <span className="text-white text-sm truncate">
-            {formatDateRange()}
-          </span>
+          <span className="text-sm truncate">{formatDateRange()}</span>
         </button>
 
-        {/* Dropdown del Date Picker */}
         {showDatePicker && (
           <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl z-500 overflow-hidden">
             {/* Tabs */}
@@ -184,24 +186,25 @@ export default function SearchBar() {
                 className={`flex-1 px-6 py-3 font-medium transition-colors ${
                   activeTab === 'exact'
                     ? 'text-red-500 border-b-2 border-red-500'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-600 hover:text-red-500'
                 }`}
               >
                 Fechas exactas
               </button>
+
               <button
                 onClick={() => setActiveTab('month')}
                 className={`flex-1 px-6 py-3 font-medium transition-colors ${
                   activeTab === 'month'
                     ? 'text-red-500 border-b-2 border-red-500'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-gray-600 hover:text-red-500'
                 }`}
               >
                 Selección por mes
               </button>
             </div>
 
-            {/* Contenido según tab */}
+            {/* Exact dates */}
             <div className="p-0">
               {activeTab === 'exact' ? (
                 <DateRangePicker
@@ -246,11 +249,10 @@ export default function SearchBar() {
                           className={`w-full py-4 rounded-lg font-medium text-center transition-colors ${
                             isSelected
                               ? 'bg-red-500 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              : 'bg-gray-100 text-gray-700 hover:bg-red-500 hover:text-white'
                           }`}
                         >
-                          {format(date, 'MMMM', { locale: es })}{' '}
-                          {/* Nombres completos */}
+                          {format(date, 'MMMM', { locale: es })}
                         </button>
                       );
                     })}
@@ -259,14 +261,15 @@ export default function SearchBar() {
               )}
             </div>
 
-            {/* Botones Borrar / Aplicar */}
+            {/* Buttons */}
             <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
               <button
                 onClick={handleClearDates}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
+                className="px-4 py-2 text-gray-700 hover:text-red-500 font-medium transition-colors"
               >
                 Borrar
               </button>
+
               <button
                 onClick={handleApplyDates}
                 className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-full transition-colors"
@@ -280,16 +283,16 @@ export default function SearchBar() {
 
       {/* Travelers */}
       <div
-        className="relative flex-1 min-w-[150px] border-l border-white/30"
+        className="relative flex-1 min-w-[150px] border-l border-gray-200"
         ref={travelersRef}
       >
         <button
           type="button"
           onClick={() => setShowTravelersPicker(!showTravelersPicker)}
-          className="flex items-center gap-2 px-4 w-full text-left"
+          className="flex items-center gap-2 px-4 w-full text-left text-black hover:text-red-500 transition-colors group"
         >
           <svg
-            className="w-5 h-5 text-white/70"
+            className="w-5 h-5 text-gray-600 group-hover:text-red-500 transition-colors"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -301,32 +304,35 @@ export default function SearchBar() {
               d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
             />
           </svg>
-          <span className="text-white text-sm">
+
+          <span className="text-sm">
             {travelers} {travelers === 1 ? 'persona' : 'personas'}
           </span>
         </button>
 
-        {/* Dropdown de viajeros */}
         {showTravelersPicker && (
-          <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl z-50 p-4 w-64">
+          <div className="absolute top-full left-0 mt-2 bg-white text-black rounded-2xl shadow-2xl z-50 p-4 w-64">
             <div className="flex items-center justify-between mb-4">
               <span className="font-medium text-gray-900">Pasajeros</span>
             </div>
+
             <div className="flex items-center justify-between">
               <span className="text-gray-700">Adultos</span>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setTravelers(Math.max(1, travelers - 1))}
-                  className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-red-500 transition-colors"
+                  className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-red-500 hover:text-red-500 transition-colors"
                 >
-                  <span className="text-gray-600">-</span>
+                  -
                 </button>
+
                 <span className="w-8 text-center font-medium">{travelers}</span>
+
                 <button
                   onClick={() => setTravelers(Math.min(20, travelers + 1))}
-                  className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-red-500 transition-colors"
+                  className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-red-500 hover:text-red-500 transition-colors"
                 >
-                  <span className="text-gray-600">+</span>
+                  +
                 </button>
               </div>
             </div>
