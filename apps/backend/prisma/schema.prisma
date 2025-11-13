@@ -289,6 +289,10 @@ model City {
   region       Region            @relation(fields: [regionId], references: [id])
   translations CityTranslation[]
   postalCodes  PostalCode[]
+  // Bridge relation to packages (normalized itinerary locations)
+  packageLocations       PackageLocation[]
+  // Back relation: packages that use this city as representative
+  representativeOfPackages TouristPackage[] @relation("RepresentativeCity")
 }
 
 /// City name translations
@@ -680,6 +684,11 @@ model TouristPackage {
   TourismCompany            TourismCompany              @relation(fields: [companyId], references: [id])
   Language                  Language?                   @relation(fields: [languageId], references: [id])
   TouristPackageTranslation TouristPackageTranslation[]
+  // Single representative city for the package (e.g., for listing cards)
+  representativeCityId      Int?
+  representativeCity        City?                       @relation("RepresentativeCity", fields: [representativeCityId], references: [id])
+  // Normalized many-to-many itinerary locations
+  locations                 PackageLocation[]
 
   @@index([companyId])
 }
@@ -718,6 +727,33 @@ model TouristPackageTranslation {
   TouristPackage     TouristPackage @relation(fields: [packageId], references: [id])
 
   @@unique([packageId, languageId])
+}
+
+/// Normalized relation between a package and its itinerary cities (locations).
+/// Allows:
+/// - Associating multiple cities to a package in the order shown to the user.
+/// - Keeping optional notes per city.
+/// Notes:
+/// - Composite primary key prevents duplicates (packageId, cityId).
+/// - Use 'order' to control the visual itinerary stop order.
+model PackageLocation {
+  /// FK to TouristPackage.id
+  packageId      Int
+  /// FK to City.id
+  cityId         Int
+  /// Display order (lower appears first)
+  order          Int?
+  /// Free-form notes for specific details
+  notes          String?
+  /// Creation timestamp
+  createdAt      DateTime        @default(now())
+
+  TouristPackage TouristPackage  @relation(fields: [packageId], references: [id])
+  City           City            @relation(fields: [cityId], references: [id])
+
+  @@id([packageId, cityId])
+  @@index([cityId])
+  @@index([packageId])
 }
 
 enum Gender {
