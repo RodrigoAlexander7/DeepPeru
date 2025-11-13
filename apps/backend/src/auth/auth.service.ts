@@ -27,12 +27,7 @@ export class AuthService {
 
     const payload = { sub: user.id, email: user.email };
     const jwt = this.jwtService.sign(payload);
-
-    return {
-      accessToken: jwt,
-      name: user.name,
-      id: user.id,
-      image: user.image,
-    };
+    console.log('JWT GENERATED:', jwt);
+    return { accessToken: jwt }; // return an JWT object
   }
 }

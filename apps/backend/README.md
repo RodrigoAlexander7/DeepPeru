@@ -31,6 +31,69 @@
 $ npm install
 ```
 
+## Database seeding (mock data)
+
+This project includes a comprehensive Prisma seed script that creates interconnected mock data across all tables (countries, regions, cities, postal codes, languages, users, admins, companies, installations, permissions, workers, tourists, packages, translations, itinerary, media, pricing, schedule, benefits, features, pickup details, and auth tables).
+
+### Requirements
+
+1. Ensure your `DATABASE_URL` environment variable points to a PostgreSQL database.
+2. Run Prisma migrations first:
+
+```bash
+$ npx prisma migrate deploy
+```
+
+### Commands
+
+```bash
+# Create all mock data
+$ npm run db:seed
+
+# Delete all seeded data (reverse dependency order)
+$ npm run db:seed:delete
+
+# Reset (delete then recreate)
+$ npm run db:seed:reset
+```
+
+### Script details
+
+Located at: `prisma/seed.ts`
+
+Usage manual (direct invocation):
+
+```bash
+$ npx ts-node prisma/seed.ts create
+$ npx ts-node prisma/seed.ts delete
+```
+
+### What gets created
+
+- Base dictionaries: Languages, Currencies, Countries (+ translations), Regions (+ translations), Cities (+ translations), PostalCodes, Permissions.
+- Core users: System admin, company admin, company worker, tourist user (+ tourist profile).
+- Company: TourismCompany + translations + installation.
+- Package: TouristPackage + translations + languages + benefits + features + itinerary + media + pricing options + schedule + pickup details.
+- Auth examples: Account, Session, VerificationToken.
+
+### Safe deletion order
+
+The delete routine removes dependent entities first to avoid FK constraint errors, finishing with base dictionaries and users.
+
+### Extending
+
+You can adjust volumes by replacing single creates with loops (e.g. generate 50 packages). Keep dependency order in `deleteData()` aligned.
+
+### Troubleshooting
+
+- If you see enum value errors, ensure your Prisma Client is generated from the current schema: `npx prisma generate`.
+- For decimal fields supply strings like `'450.00'`.
+- If rerunning leads to unique constraint errors, either run `db:seed:reset` or convert creates to `upsert` where appropriate.
+
+### Caveats
+
+Seed data is illustrative only—never use in production. Replace mock tokens and PII before deploying.
+
 ## Compile and run the project
 
 ```bash

@@ -1,0 +1,103 @@
+@startuml
+left to right direction
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam dpi 150
+
+title Arquitectura modular - Gestor web de Paquetes Turísticos
+
+' ----------------- COLORES -----------------
+' AUTH_COLOR      #FFDAB9  → flecha #E6A96F
+' COMPANIES_COLOR #E6F7FF  → flecha #4BA3C7
+' PACKAGES_COLOR  #FFF3B0  → flecha #C7A600
+' RES_COLOR       #FFE4E1  → flecha #D17B73
+' PAY_COLOR       #E8FFE6  → flecha #4FA84B
+' REV_COLOR       #F0E6FF  → flecha #8C6BD1
+' SEARCH_COLOR    #E6F0FF  → flecha #4A78C7
+' PROMO_COLOR     #FFF0F5  → flecha #C76B88
+' NOTIF_COLOR     #F5FFFA  → flecha #4BAF83
+' ------------------------------------------------------
+
+package "Usuarios y Roles" as Auth #FFDAB9 {
+  [Autenticación]
+  [Gestión de Roles y Permisos]
+}
+
+package "Compañías / Organizaciones" as Companies #E6F7FF {
+  [Company]
+  [Organization]
+  [CompanyProfile]
+  [Members/Agents]
+}
+
+package "Paquetes Turísticos" as Packages #FFF3B0 {
+  [Paquete]
+  [Destino]
+  [Itinerario]
+  [ServicioIncluido]
+  [Imagen]
+}
+
+package "Reservas / Ventas" as Reservations #FFE4E1 {
+  [Reserva]
+  [Pago]
+  [Factura]
+  [Cliente]
+}
+
+package "Pagos" as Payments #E8FFE6 {
+  [Transacción]
+  [MétodoPago]
+  [Comprobante]
+}
+
+package "Reseñas y Calificaciones" as Reviews #F0E6FF {
+  [Reseña]
+  [Calificación]
+}
+
+package "Búsquedas y Filtros" as Search #E6F0FF {
+  [Motor de búsqueda]
+  [Filtros]
+}
+
+package "Promociones y Publicidad" as Promotions #FFF0F5 {
+  [Promoción]
+  [Banner]
+  [Campaña]
+}
+
+package "Notificaciones" as Notifications #F5FFFA {
+  [Correo]
+  [Push]
+  [Alerta]
+}
+
+' -------------------- Relaciones (con color de origen oscuro) --------------------
+Auth -[#E6A96F]-> Companies : controla/valida (signup empresa)
+Auth -[#E6A96F]-> Packages : controla acceso
+Auth -[#E6A96F]-> Reservations
+Auth -[#E6A96F]-> Reviews
+Auth -[#E6A96F]-> Promotions
+
+Companies -[#4BA3C7]-> Packages : publica/ofrece paquetes
+Companies -[#4BA3C7]-> Promotions : crea campañas
+Companies -[#4BA3C7]-> Auth : tiene miembros (admins/agents)
+Companies -[#4BA3C7]-> Reservations : ve reservas de sus paquetes
+
+Packages -[#C7A600]-> Reservations : se reserva un paquete
+Packages -[#C7A600]-> Reviews : recibe reseñas
+Packages -[#C7A600]-> Search : se indexa
+
+Reservations -[#D17B73]-> Payments : procesa pago
+Reservations -[#D17B73]-> Notifications : envía confirmaciones
+
+Payments -[#4FA84B]-> Notifications : confirma pago
+
+Promotions -[#C76B88]-> Search : se indexan
+
+Reviews -[#8C6BD1]-> Search : mejora relevancia
+
+@enduml
+

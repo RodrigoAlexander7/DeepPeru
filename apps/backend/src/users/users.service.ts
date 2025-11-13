@@ -11,6 +11,7 @@ export class UsersService {
         name,
         email,
         image,
+        updatedAt: new Date(),
       },
     });
   }
