@@ -3,6 +3,8 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { CreateTouristPackageDto } from './dto/create-tourist-package.dto';
 import { UpdateTouristPackageDto } from './dto/update-tourist-package.dto';
 import { QueryTouristPackageDto } from './dto/query-tourist-package.dto';
+import { QueryTouristPackageByCityDto } from './dto/query-by-city.dto';
+import { QueryTouristPackageNearbyDto } from './dto/query-nearby.dto';
 import { Prisma } from '@prisma/client';
 
 /**
@@ -342,5 +344,166 @@ export class TouristPackagesService {
     }
 
     return pkg.companyId;
+  }
+
+  /**
+   * Find packages by city using representative city or itinerary locations
+   * @param query - City-based filter with pagination
+   */
+  async findByCity(query: QueryTouristPackageByCityDto) {
+    const { cityId, type, difficulty, isActive = true, page = 1, limit = 10 } = query;
+
+    // Build SQL WHERE with safe parameterization to support fields not exposed by Prisma client yet
+    const conditions = [
+      Prisma.sql`t."isActive" = ${isActive}`,
+      Prisma.sql`(
+        t."representativeCityId" = ${cityId}
+        OR EXISTS(
+          SELECT 1 FROM "PackageLocation" pl
+          WHERE pl."packageId" = t."id" AND pl."cityId" = ${cityId}
+        )
+      )`,
+    ];
+    if (type)
+      conditions.push(
+        Prisma.sql`t."type" = CAST(${type} AS "PackageType")`,
+      );
+    if (difficulty)
+      conditions.push(
+        Prisma.sql`t."difficulty" = CAST(${difficulty} AS "DifficultyLevel")`,
+      );
+    const whereSql = conditions.reduce((acc, curr, idx) => {
+      return idx === 0 ? Prisma.sql`${curr}` : Prisma.sql`${acc} AND ${curr}`;
+    }, Prisma.sql``);
+
+    // Count packages
+    const countRows = await this.prisma.$queryRaw<Array<{ count: bigint }>>(
+      Prisma.sql`SELECT COUNT(*)::bigint AS count FROM "TouristPackage" t WHERE ${whereSql}`,
+    );
+    const total = Number(countRows[0]?.count ?? 0);
+
+    // Fetch page of ids
+    const idsRows = await this.prisma.$queryRaw<Array<{ id: number }>>(
+      Prisma.sql`SELECT t."id" FROM "TouristPackage" t WHERE ${whereSql} ORDER BY t."createdAt" DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
+    );
+    const ids = idsRows.map((r) => r.id);
+
+    if (ids.length === 0) {
+      return {
+        data: [],
+        meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      };
+    }
+
+    const packages = await this.prisma.touristPackage.findMany({
+      where: { id: { in: ids } },
+      include: {
+        TourismCompany: {
+          select: { id: true, name: true, logoUrl: true, rating: true },
+        },
+        PricingOption: {
+          where: { isActive: true },
+          orderBy: { amount: 'asc' },
+          take: 1,
+        },
+        Media: { where: { isPrimary: true }, take: 1 },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return {
+      data: packages,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
+   * Find nearby packages by coordinates within a radius (km), ordered by distance
+   * Uses meeting point coordinates when available
+   * @param query - lat, lng, radius and optional filters
+   */
+  async findNearby(query: QueryTouristPackageNearbyDto) {
+    const {
+      lat,
+      lng,
+      radiusKm = 10,
+      type,
+      difficulty,
+      isActive = true,
+      page = 1,
+      limit = 10,
+    } = query;
+
+    // Approximate bounding box for quick pre-filter
+    const latDelta = radiusKm / 111; // ~111 km per degree latitude
+    const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180) || 1);
+
+  const where: any = {
+      meetingLatitude: {
+        gte: lat - latDelta,
+        lte: lat + latDelta,
+      },
+      meetingLongitude: {
+        gte: lng - lngDelta,
+        lte: lng + lngDelta,
+      },
+    } as Prisma.TouristPackageWhereInput;
+
+    if (type) where.type = type;
+    if (difficulty) where.difficulty = difficulty;
+    if (isActive !== undefined) where.isActive = isActive;
+
+    // Fetch candidates within bounding box
+    const candidates = await this.prisma.touristPackage.findMany({
+      where,
+      include: {
+        TourismCompany: {
+          select: { id: true, name: true, logoUrl: true, rating: true },
+        },
+        PricingOption: {
+          where: { isActive: true },
+          orderBy: { amount: 'asc' },
+          take: 1,
+        },
+        Media: { where: { isPrimary: true }, take: 1 },
+      },
+    });
+
+    // Compute haversine distance and sort
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371; // Earth radius in km
+    const withDistance = candidates
+      .filter((p) => p.meetingLatitude != null && p.meetingLongitude != null)
+      .map((p) => {
+        const dLat = toRad((p.meetingLatitude as number) - lat);
+        const dLng = toRad((p.meetingLongitude as number) - lng);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(lat)) *
+            Math.cos(toRad(p.meetingLatitude as number)) *
+            Math.sin(dLng / 2) *
+            Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distanceKm = R * c;
+        return { ...p, distanceKm } as typeof p & { distanceKm: number };
+      })
+      .filter((p) => p.distanceKm <= radiusKm)
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    const total = withDistance.length;
+    const start = (page - 1) * limit;
+    const data = withDistance.slice(start, start + limit);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        center: { lat, lng },
+        radiusKm,
+      },
+    };
   }
 }

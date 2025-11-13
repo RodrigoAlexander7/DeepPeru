@@ -22,6 +22,8 @@ import { TouristPackagesService } from './tourist-packages.service';
 import { CreateTouristPackageDto } from './dto/create-tourist-package.dto';
 import { UpdateTouristPackageDto } from './dto/update-tourist-package.dto';
 import { QueryTouristPackageDto } from './dto/query-tourist-package.dto';
+import { QueryTouristPackageByCityDto } from './dto/query-by-city.dto';
+import { QueryTouristPackageNearbyDto } from './dto/query-nearby.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CompanyOwnershipGuard } from './guards/company-ownership.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -88,6 +90,42 @@ export class TouristPackagesController {
   })
   findAll(@Query() query: QueryTouristPackageDto) {
     return this.touristPackagesService.findAll(query);
+  }
+
+  /**
+   * Get tourist packages by city
+   * Public endpoint - filters packages by city using representative city or itinerary locations
+   */
+  @Get('by-city')
+  @ApiOperation({
+    summary: 'Get tourist packages by city',
+    description:
+      'Retrieves a paginated list of tourist packages associated with a given city. Matches packages whose representative city equals the provided city or whose itinerary locations include it.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of tourist packages retrieved successfully',
+  })
+  findByCity(@Query() query: QueryTouristPackageByCityDto) {
+    return this.touristPackagesService.findByCity(query);
+  }
+
+  /**
+   * Get nearby tourist packages by coordinates
+   * Public endpoint - finds packages near a given latitude/longitude within a radius
+   */
+  @Get('nearby')
+  @ApiOperation({
+    summary: 'Get nearby tourist packages',
+    description:
+      'Retrieves a paginated list of tourist packages near the provided coordinates, ordered by distance. Uses meeting point coordinates when available.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of nearby tourist packages retrieved successfully',
+  })
+  findNearby(@Query() query: QueryTouristPackageNearbyDto) {
+    return this.touristPackagesService.findNearby(query);
   }
 
   /**
