@@ -101,7 +101,7 @@ export default function SearchBar() {
   const formatDateRange = () => {
     // Si no ha seleccionado fechas aún, mostrar placeholder
     if (!hasSelectedDates) {
-      return 'Fecha de entrada - Fecha de salida';
+      return 'Fecha de entrada — Fecha de salida';
     }
 
     if (activeTab === 'exact') {
@@ -111,7 +111,7 @@ export default function SearchBar() {
     } else if (selectedMonth) {
       return format(selectedMonth, 'MMMM yyyy', { locale: es });
     }
-    return 'Fecha de entrada - Fecha de salida';
+    return 'Fecha de entrada — Fecha de salida';
   };
 
   return (
