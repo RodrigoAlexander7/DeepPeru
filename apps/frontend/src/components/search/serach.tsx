@@ -20,13 +20,12 @@ export default function SearchBar() {
   const [dateRange, setDateRange] = useState([
     {
       startDate: new Date(),
-      endDate: new Date(),
+      endDate: new Date(new Date().setDate(new Date().getDate() + 5)),
       key: 'selection',
     },
   ]);
 
   const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
-  const [hasSelectedDates, setHasSelectedDates] = useState(false);
 
   const datePickerRef = useRef<HTMLDivElement>(null);
   const travelersRef = useRef<HTMLDivElement>(null);
@@ -85,25 +84,18 @@ export default function SearchBar() {
     setDateRange([
       {
         startDate: new Date(),
-        endDate: new Date(),
+        endDate: new Date(new Date().setDate(new Date().getDate() + 5)),
         key: 'selection',
       },
     ]);
     setSelectedMonth(null);
-    setHasSelectedDates(false);
   };
 
   const handleApplyDates = () => {
-    setHasSelectedDates(true);
     setShowDatePicker(false);
   };
 
   const formatDateRange = () => {
-    // Si no ha seleccionado fechas aún, mostrar placeholder
-    if (!hasSelectedDates) {
-      return 'Fecha de entrada - Fecha de salida';
-    }
-
     if (activeTab === 'exact') {
       const start = format(dateRange[0].startDate, 'dd MMM', { locale: es });
       const end = format(dateRange[0].endDate, 'dd MMM yyyy', { locale: es });
@@ -111,7 +103,7 @@ export default function SearchBar() {
     } else if (selectedMonth) {
       return format(selectedMonth, 'MMMM yyyy', { locale: es });
     }
-    return 'Fecha de entrada - Fecha de salida';
+    return 'Seleccionar fechas';
   };
 
   return (
@@ -148,7 +140,7 @@ export default function SearchBar() {
 
       {/* Date Range Picker */}
       <div
-        className="relative flex-1 min-w-[350px] border-l border-white/30"
+        className="relative flex-1 min-w-[250px] border-l border-white/30"
         ref={datePickerRef}
       >
         <button
@@ -176,7 +168,7 @@ export default function SearchBar() {
 
         {/* Dropdown del Date Picker */}
         {showDatePicker && (
-          <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl z-500 overflow-hidden">
+          <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl z-50 overflow-hidden">
             {/* Tabs */}
             <div className="flex border-b">
               <button
@@ -202,7 +194,7 @@ export default function SearchBar() {
             </div>
 
             {/* Contenido según tab */}
-            <div className="p-0">
+            <div className="p-2">
               {activeTab === 'exact' ? (
                 <DateRangePicker
                   ranges={dateRange}
@@ -210,32 +202,19 @@ export default function SearchBar() {
                   months={2}
                   direction="horizontal"
                   locale={es}
-                  rangeColors={['#ef4444']}
+                  rangeColors={['#ef4444']} // Tailwind red-500
                   showDateDisplay={false}
                   minDate={new Date()}
                   staticRanges={[]}
                   inputRanges={[]}
-                  className="!m-0 !p-0 
-                    [&_.rdrDefinedRangesWrapper]:hidden 
-                    [&_.rdrCalendarWrapper]:!m-0 
-                    [&_.rdrCalendarWrapper]:!p-0
-                    [&_.rdrMonthPicker]:text-lg 
-                    [&_.rdrMonthPicker]:font-bold
-                    [&_.rdrMonthPicker]:text-gray-900
-                    [&_.rdrYearPicker]:text-lg
-                    [&_.rdrYearPicker]:font-bold
-                    [&_.rdrYearPicker]:text-gray-900
-                    [&_.rdrWeekDay]:font-bold
-                    [&_.rdrWeekDay]:text-black
-
-                    "
+                  className="!m-0 !p-0 [&_.rdrDefinedRangesWrapper]:hidden [&_.rdrCalendarWrapper]:!m-0 [&_.rdrCalendarWrapper]:!p-0"
                 />
               ) : (
-                <div className="w-[664px] px-4 py-3">
-                  <p className="text-sm text-gray-600 mb-4">
+                <div className="w-full max-w-md">
+                  <p className="text-sm text-gray-600 mb-3">
                     Selecciona un mes:
                   </p>
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-3 gap-2">
                     {Array.from({ length: 12 }, (_, i) => {
                       const date = new Date(new Date().getFullYear(), i, 1);
                       const isSelected = selectedMonth?.getMonth() === i;
@@ -243,14 +222,13 @@ export default function SearchBar() {
                         <button
                           key={i}
                           onClick={() => setSelectedMonth(date)}
-                          className={`w-full py-4 rounded-lg font-medium text-center transition-colors ${
+                          className={`px-4 py-3 rounded-lg font-medium transition-colors ${
                             isSelected
                               ? 'bg-red-500 text-white'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                         >
-                          {format(date, 'MMMM', { locale: es })}{' '}
-                          {/* Nombres completos */}
+                          {format(date, 'MMM', { locale: es })}
                         </button>
                       );
                     })}
