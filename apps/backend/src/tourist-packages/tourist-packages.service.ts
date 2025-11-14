@@ -5,6 +5,7 @@ import { UpdateTouristPackageDto } from './dto/update-tourist-package.dto';
 import { QueryTouristPackageDto } from './dto/query-tourist-package.dto';
 import { QueryTouristPackageByCityDto } from './dto/query-by-city.dto';
 import { QueryTouristPackageNearbyDto } from './dto/query-nearby.dto';
+import { SearchTouristPackageDto } from './dto/search-tourist-package.dto';
 import { Prisma } from '@prisma/client';
 
 /**
@@ -351,7 +352,14 @@ export class TouristPackagesService {
    * @param query - City-based filter with pagination
    */
   async findByCity(query: QueryTouristPackageByCityDto) {
-    const { cityId, type, difficulty, isActive = true, page = 1, limit = 10 } = query;
+    const {
+      cityId,
+      type,
+      difficulty,
+      isActive = true,
+      page = 1,
+      limit = 10,
+    } = query;
 
     // Build SQL WHERE with safe parameterization to support fields not exposed by Prisma client yet
     const conditions = [
@@ -365,16 +373,17 @@ export class TouristPackagesService {
       )`,
     ];
     if (type)
-      conditions.push(
-        Prisma.sql`t."type" = CAST(${type} AS "PackageType")`,
-      );
+      conditions.push(Prisma.sql`t."type" = CAST(${type} AS "PackageType")`);
     if (difficulty)
       conditions.push(
         Prisma.sql`t."difficulty" = CAST(${difficulty} AS "DifficultyLevel")`,
       );
-    const whereSql = conditions.reduce((acc, curr, idx) => {
-      return idx === 0 ? Prisma.sql`${curr}` : Prisma.sql`${acc} AND ${curr}`;
-    }, Prisma.sql``);
+    const whereSql = conditions.reduce(
+      (acc, curr, idx) => {
+        return idx === 0 ? Prisma.sql`${curr}` : Prisma.sql`${acc} AND ${curr}`;
+      },
+      Prisma.sql``,
+    );
 
     // Count packages
     const countRows = await this.prisma.$queryRaw<Array<{ count: bigint }>>(
@@ -438,7 +447,7 @@ export class TouristPackagesService {
     const latDelta = radiusKm / 111; // ~111 km per degree latitude
     const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180) || 1);
 
-  const where: any = {
+    const where: any = {
       meetingLatitude: {
         gte: lat - latDelta,
         lte: lat + latDelta,
@@ -505,5 +514,362 @@ export class TouristPackagesService {
         radiusKm,
       },
     };
+  }
+
+  /**
+   * Flexible search for tourist packages with multiple filters
+   * Supports destination search, date ranges, traveler count, price range, and more
+   * Designed to be expandable for future search parameters
+   * @param searchDto - Search parameters
+   * @returns Paginated search results with metadata
+   */
+  async search(searchDto: SearchTouristPackageDto) {
+    const {
+      destination,
+      cityId,
+      regionId,
+      startDate,
+      endDate,
+      travelers,
+      minParticipants,
+      maxParticipants,
+      type,
+      difficulty,
+      companyId,
+      languageId,
+      minPrice,
+      maxPrice,
+      currencyId,
+      minAge,
+      maxAge,
+      minRating,
+      duration,
+      hasHotelPickup,
+      isActive = true,
+      search,
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      order = 'desc',
+    } = searchDto;
+
+    // Build WHERE clause dynamically
+    const where: Prisma.TouristPackageWhereInput = {
+      isActive,
+    };
+
+    // Company filter
+    if (companyId) {
+      where.companyId = companyId;
+    }
+
+    // Package type and difficulty
+    if (type) {
+      where.type = type;
+    }
+    if (difficulty) {
+      where.difficulty = difficulty;
+    }
+
+    // Language filter
+    if (languageId) {
+      where.languageId = languageId;
+    }
+
+    // Duration filter (exact match)
+    if (duration) {
+      where.duration = duration;
+    }
+
+    // Rating filter
+    if (minRating !== undefined) {
+      where.rating = { gte: minRating };
+    }
+
+    // Age filters
+    if (minAge !== undefined || maxAge !== undefined) {
+      where.AND = where.AND || [];
+      if (minAge !== undefined) {
+        (where.AND as any[]).push({
+          OR: [{ minAge: { lte: minAge } }, { minAge: null }],
+        });
+      }
+      if (maxAge !== undefined) {
+        (where.AND as any[]).push({
+          OR: [{ maxAge: { gte: maxAge } }, { maxAge: null }],
+        });
+      }
+    }
+
+    // Travelers filter: package must accommodate the number of travelers
+    if (travelers) {
+      where.AND = where.AND || [];
+      (where.AND as any[]).push({
+        OR: [
+          { minParticipants: { lte: travelers } },
+          { minParticipants: null },
+        ],
+      });
+      (where.AND as any[]).push({
+        OR: [
+          { maxParticipants: { gte: travelers } },
+          { maxParticipants: null },
+        ],
+      });
+    }
+
+    // Min/Max participants filters
+    if (minParticipants !== undefined) {
+      where.minParticipants = { gte: minParticipants };
+    }
+    if (maxParticipants !== undefined) {
+      where.maxParticipants = { lte: maxParticipants };
+    }
+
+    // Destination search: search in City name, Region name via relations
+    if (destination) {
+      where.OR = [
+        // Search in representative city
+        {
+          representativeCity: {
+            name: { contains: destination, mode: 'insensitive' },
+          },
+        },
+        // Search in representative city's region
+        {
+          representativeCity: {
+            region: {
+              name: { contains: destination, mode: 'insensitive' },
+            },
+          },
+        },
+        // Search in package locations (itinerary cities)
+        {
+          locations: {
+            some: {
+              City: {
+                name: { contains: destination, mode: 'insensitive' },
+              },
+            },
+          },
+        },
+        // Search in package locations' regions
+        {
+          locations: {
+            some: {
+              City: {
+                region: {
+                  name: { contains: destination, mode: 'insensitive' },
+                },
+              },
+            },
+          },
+        },
+      ] as any;
+    }
+
+    // City ID filter (exact match)
+    if (cityId) {
+      const cityOrConditions = [
+        { representativeCityId: cityId },
+        {
+          locations: {
+            some: { cityId },
+          },
+        },
+      ] as any;
+
+      if (where.OR) {
+        where.AND = where.AND || [];
+        (where.AND as any[]).push({ OR: cityOrConditions });
+      } else {
+        where.OR = cityOrConditions;
+      }
+    }
+
+    // Region ID filter
+    if (regionId) {
+      const regionOrConditions = [
+        {
+          representativeCity: {
+            regionId,
+          },
+        },
+        {
+          locations: {
+            some: {
+              City: {
+                regionId,
+              },
+            },
+          },
+        },
+      ] as any;
+
+      if (where.OR) {
+        where.AND = where.AND || [];
+        (where.AND as any[]).push({ OR: regionOrConditions });
+      } else {
+        where.OR = regionOrConditions;
+      }
+    }
+
+    // Text search in name, description, included items
+    if (search) {
+      const searchOrConditions = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { includedItems: { has: search } },
+      ] as any;
+
+      if (where.OR) {
+        where.AND = where.AND || [];
+        (where.AND as any[]).push({ OR: searchOrConditions });
+      } else {
+        where.OR = searchOrConditions;
+      }
+    }
+
+    // Hotel pickup filter
+    if (hasHotelPickup !== undefined) {
+      where.PickupDetail = {
+        some: {
+          isHotelPickupAvailable: hasHotelPickup,
+        },
+      };
+    }
+
+    // Include relations for additional filtering and display
+    const include = {
+      TourismCompany: {
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+          rating: true,
+        },
+      },
+      PricingOption: {
+        where: { isActive: true },
+        orderBy: { amount: 'asc' as const },
+      },
+      Media: {
+        where: { isPrimary: true },
+        take: 1,
+      },
+      representativeCity: {
+        include: {
+          region: true,
+        },
+      },
+      Schedule: true,
+    } as const;
+
+    // Fetch packages
+    const [packages, total] = await Promise.all([
+      this.prisma.touristPackage.findMany({
+        where,
+        include,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: this.buildOrderBy(sortBy, order),
+      }),
+      this.prisma.touristPackage.count({ where }),
+    ]);
+
+    // Post-filtering for price range (needs to be done after fetch due to relation)
+    let filteredPackages = packages;
+
+    if (
+      minPrice !== undefined ||
+      maxPrice !== undefined ||
+      startDate ||
+      endDate
+    ) {
+      filteredPackages = packages.filter((pkg) => {
+        // Price filtering
+        if (minPrice !== undefined || maxPrice !== undefined) {
+          const pricingOptions = pkg.PricingOption.filter((po) => {
+            if (currencyId && po.currencyId !== currencyId) return false;
+
+            const amount = Number(po.amount);
+            if (minPrice !== undefined && amount < minPrice) return false;
+            if (maxPrice !== undefined && amount > maxPrice) return false;
+
+            return true;
+          });
+
+          if (pricingOptions.length === 0) return false;
+        }
+
+        // Date filtering via schedules and pricing options validity
+        if (startDate || endDate) {
+          const start = startDate ? new Date(startDate) : null;
+          const end = endDate ? new Date(endDate) : null;
+
+          // Check if any pricing option is valid for the date range
+          const hasValidPricing = pkg.PricingOption.some((po) => {
+            if (!po.validFrom && !po.validTo) return true; // No date restrictions
+
+            if (start && po.validTo && new Date(po.validTo) < start)
+              return false;
+            if (end && po.validFrom && new Date(po.validFrom) > end)
+              return false;
+
+            return true;
+          });
+
+          if (!hasValidPricing) return false;
+        }
+
+        return true;
+      });
+    }
+
+    return {
+      data: filteredPackages,
+      meta: {
+        total: filteredPackages.length,
+        totalResults: total,
+        page,
+        limit,
+        totalPages: Math.ceil(filteredPackages.length / limit),
+        filters: {
+          destination,
+          cityId,
+          regionId,
+          startDate,
+          endDate,
+          travelers,
+          type,
+          difficulty,
+          minPrice,
+          maxPrice,
+          currencyId,
+        },
+      },
+    };
+  }
+
+  /**
+   * Build orderBy clause for sorting
+   * @param sortBy - Field to sort by
+   * @param order - Sort direction
+   */
+  private buildOrderBy(
+    sortBy: string,
+    order: 'asc' | 'desc',
+  ): Prisma.TouristPackageOrderByWithRelationInput {
+    // Special handling for price sorting (requires relation)
+    if (sortBy === 'price') {
+      return {
+        PricingOption: {
+          _count: order,
+        },
+      };
+    }
+
+    // Default sorting by field
+    return { [sortBy]: order };
   }
 }
