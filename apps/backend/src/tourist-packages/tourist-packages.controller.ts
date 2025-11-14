@@ -24,6 +24,7 @@ import { UpdateTouristPackageDto } from './dto/update-tourist-package.dto';
 import { QueryTouristPackageDto } from './dto/query-tourist-package.dto';
 import { QueryTouristPackageByCityDto } from './dto/query-by-city.dto';
 import { QueryTouristPackageNearbyDto } from './dto/query-nearby.dto';
+import { SearchTouristPackageDto } from './dto/search-tourist-package.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CompanyOwnershipGuard } from './guards/company-ownership.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -90,6 +91,61 @@ export class TouristPackagesController {
   })
   findAll(@Query() query: QueryTouristPackageDto) {
     return this.touristPackagesService.findAll(query);
+  }
+
+  /**
+   * Flexible search for tourist packages
+   * Public endpoint - supports multiple search parameters like Airbnb
+   * Filters by destination, dates, travelers, price, and more
+   */
+  @Get('search')
+  @ApiOperation({
+    summary: 'Search tourist packages with flexible filters',
+    description:
+      'Advanced search endpoint supporting multiple filters: destination (city/region), date range, number of travelers, price range, package type, difficulty, rating, and more. Designed to be easily expandable for additional search parameters.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Search results retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          description: 'Array of tourist packages matching search criteria',
+        },
+        meta: {
+          type: 'object',
+          properties: {
+            total: {
+              type: 'number',
+              description: 'Total number of results after all filters',
+            },
+            totalResults: {
+              type: 'number',
+              description: 'Total number of results before post-filtering',
+            },
+            page: { type: 'number', description: 'Current page number' },
+            limit: { type: 'number', description: 'Items per page' },
+            totalPages: {
+              type: 'number',
+              description: 'Total pages available',
+            },
+            filters: {
+              type: 'object',
+              description: 'Applied filters summary',
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid search parameters',
+  })
+  search(@Query() searchDto: SearchTouristPackageDto) {
+    return this.touristPackagesService.search(searchDto);
   }
 
   /**
