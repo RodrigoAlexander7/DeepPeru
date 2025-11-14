@@ -69,10 +69,10 @@ export default function AutoCarousel({
                 {item.title}
               </h3>
               <p className="mt-1 text-xs text-gray-400">
-                {item.days} días • Desde ${item.price}
+                {item.days} days • From ${item.price}
               </p>
               <button className="mt-3 text-xs font-semibold px-3 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-500 hover:to-purple-500 active:scale-[0.96] transition-all shadow-[0_4px_18px_-4px_rgba(59,130,246,0.45)]">
-                Ver detalle
+                View details
               </button>
             </motion.div>
           ))}
@@ -82,7 +82,7 @@ export default function AutoCarousel({
       <div className="absolute inset-y-0 right-0 w-24 pointer-events-none bg-gradient-to-l from-gray-950 via-gray-950/40 to-transparent" />
       {paused && (
         <div className="absolute top-2 right-3 text-[10px] px-2 py-1 rounded bg-black/40 backdrop-blur border border-white/10 text-gray-300">
-          Pausado
+          Paused
         </div>
       )}
     </div>

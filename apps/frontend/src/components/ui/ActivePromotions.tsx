@@ -15,17 +15,17 @@ export default function ActivePromotions() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
             <span className="inline-block w-2 h-2 rounded-full bg-gradient-to-r from-pink-500 to-yellow-400 animate-pulse" />
-            Promociones activas
+            Active Promotions
           </h2>
           <p className="mt-1 text-xs text-gray-400">
-            Aprovecha ofertas limitadas y descuentos especiales.
+            Take advantage of limited offers and special discounts.
           </p>
         </div>
         <a
           href="/promotions"
           className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors hover:underline underline-offset-4"
         >
-          Ver todas
+          View all
         </a>
       </motion.div>
       <AutoCarousel items={activePromotions} />

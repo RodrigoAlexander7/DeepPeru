@@ -39,10 +39,10 @@ export default function Navbar() {
   const navItems = [
     { label: 'Home', href: '/home' },
     { label: 'Packages', href: '/packages' },
-    { label: 'Travels', href: '/travels' },
-    { label: 'Alojamiento', href: '/lodging' },
-    { label: 'Actividades', href: '/activities' },
-    { label: 'Destinos', href: '/destinations' },
+    { label: 'Trips', href: '/travels' },
+    { label: 'Lodging', href: '/lodging' },
+    { label: 'Activities', href: '/activities' },
+    { label: 'Destinations', href: '/destinations' },
   ];
 
   return (
@@ -89,7 +89,7 @@ export default function Navbar() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar destinos, paquetes..."
+                placeholder="Search destinations, packages..."
                 className="w-full pl-9 pr-3 py-2 rounded-lg bg-gray-800/70 border border-gray-700 focus:border-blue-500 outline-none text-sm text-gray-200 placeholder-gray-500 transition-colors"
               />
             </form>
@@ -134,7 +134,7 @@ export default function Navbar() {
                 href="/register"
                 className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-semibold shadow-sm hover:shadow-md hover:from-blue-500 hover:to-purple-500 transition-all"
               >
-                Registrarse
+                Register
               </Link>
             )}
           </div>
@@ -164,7 +164,7 @@ export default function Navbar() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar destinos, paquetes..."
+                placeholder="Search destinations, packages..."
                 className="w-full pl-9 pr-3 py-2 rounded-lg bg-gray-800/70 border border-gray-700 focus:border-blue-500 outline-none text-sm text-gray-200 placeholder-gray-500 transition-colors"
               />
             </form>

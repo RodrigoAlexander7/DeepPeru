@@ -10,7 +10,7 @@ export interface PackageItem {
 export const popularPackages: PackageItem[] = [
   {
     id: 'pk1',
-    title: 'Aventura en Cusco',
+    title: 'Adventure in Cusco',
     destination: 'Cusco',
     image:
       'https://images.unsplash.com/photo-1543246737-023b6e4b9cba?auto=format&fit=crop&w=800&q=60',
@@ -19,7 +19,7 @@ export const popularPackages: PackageItem[] = [
   },
   {
     id: 'pk2',
-    title: 'Magia del Amazonas',
+    title: 'Amazon Magic',
     destination: 'Iquitos',
     image:
       'https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=800&q=60',
@@ -28,7 +28,7 @@ export const popularPackages: PackageItem[] = [
   },
   {
     id: 'pk3',
-    title: 'Ruta del Sur',
+    title: 'Southern Route',
     destination: 'Arequipa',
     image:
       'https://images.unsplash.com/photo-1502404768591-f24b0b86db3c?auto=format&fit=crop&w=800&q=60',
@@ -37,7 +37,7 @@ export const popularPackages: PackageItem[] = [
   },
   {
     id: 'pk4',
-    title: 'Lagos y Cultura',
+    title: 'Lakes & Culture',
     destination: 'Puno',
     image:
       'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=60',
@@ -46,7 +46,7 @@ export const popularPackages: PackageItem[] = [
   },
   {
     id: 'pk5',
-    title: 'Costa Vibrante',
+    title: 'Vibrant Coast',
     destination: 'Lima',
     image:
       'https://images.unsplash.com/photo-1552072092-2e85d0ef8016?auto=format&fit=crop&w=800&q=60',
@@ -58,7 +58,7 @@ export const popularPackages: PackageItem[] = [
 export const activePromotions: PackageItem[] = [
   {
     id: 'pr1',
-    title: 'Descuento 20% Machu Picchu',
+    title: '20% Off Machu Picchu',
     destination: 'Cusco',
     image:
       'https://images.unsplash.com/photo-1600785439283-3c1b84a2519c?auto=format&fit=crop&w=800&q=60',
@@ -67,7 +67,7 @@ export const activePromotions: PackageItem[] = [
   },
   {
     id: 'pr2',
-    title: '2x1 Selva Amazónica',
+    title: '2x1 Amazon Rainforest',
     destination: 'Amazonas',
     image:
       'https://images.unsplash.com/photo-1526481280698-8fcc1a2e8390?auto=format&fit=crop&w=800&q=60',
@@ -76,7 +76,7 @@ export const activePromotions: PackageItem[] = [
   },
   {
     id: 'pr3',
-    title: 'Promo Fin de Semana Lima',
+    title: 'Weekend Deal Lima',
     destination: 'Lima',
     image:
       'https://images.unsplash.com/photo-1585338109443-9af6fb1877a0?auto=format&fit=crop&w=800&q=60',

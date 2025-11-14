@@ -15,17 +15,17 @@ export default function PopularPackages() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
             <span className="inline-block w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse" />
-            Paquetes populares
+            Popular Packages
           </h2>
           <p className="mt-1 text-xs text-gray-400">
-            Explora experiencias preferidas por otros viajeros.
+            Explore experiences preferred by other travelers.
           </p>
         </div>
         <a
           href="/packages"
           className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors hover:underline underline-offset-4"
         >
-          Ver todos
+          View all
         </a>
       </motion.div>
       <AutoCarousel items={popularPackages} />

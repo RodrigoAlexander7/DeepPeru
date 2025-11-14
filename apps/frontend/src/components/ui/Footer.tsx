@@ -21,8 +21,8 @@ export default function Footer() {
               <span className="text-xl font-bold text-white">DeepPeru</span>
             </div>
             <p className="text-sm text-gray-400">
-              Vive experiencias únicas en Perú con paquetes diseñados para cada
-              tipo de viajero.
+              Live unique experiences in Peru with packages crafted for every
+              type of traveler.
             </p>
           </div>
 
@@ -180,14 +180,14 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 border-t border-gray-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-400">
-          <p>© {year} DeepPeru. Todos los derechos reservados.</p>
+          <p>© {year} DeepPeru. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <a href="/terms" className="hover:text-white transition-colors">
-              Términos
+              Terms
             </a>
             <span className="opacity-40">•</span>
             <a href="/privacy" className="hover:text-white transition-colors">
-              Privacidad
+              Privacy
             </a>
             <span className="opacity-40">•</span>
             <a href="/cookies" className="hover:text-white transition-colors">
