@@ -25,7 +25,8 @@ export default function SearchPage() {
   const totalPages = Math.ceil(packages.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentPackages = packages.slice(startIndex, endIndex);
+  const arrayPackages = Array.isArray(packages) ? packages : [];
+  const currentPackages = arrayPackages.slice(startIndex, endIndex);
 
   // Ejecutar búsqueda cuando cambien los parámetros
   useEffect(() => {

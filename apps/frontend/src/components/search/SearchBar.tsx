@@ -10,6 +10,7 @@ import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import { travelService } from '@/features/travel/travelService';
 import { SearchParams } from '@/types';
+import { useSearchParams } from 'next/navigation';
 
 export default function SearchBar() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function SearchBar() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTravelersPicker, setShowTravelersPicker] = useState(false);
   const [activeTab, setActiveTab] = useState<'exact' | 'month'>('exact');
+  const searchParams = useSearchParams();
 
   const [dateRange, setDateRange] = useState([
     {
@@ -53,6 +55,29 @@ export default function SearchBar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Cargar valores desde la URL para que no se borren después de buscar
+  useEffect(() => {
+    const dest = searchParams.get('destination');
+    const start = searchParams.get('startDate');
+    const end = searchParams.get('endDate');
+    const trav = searchParams.get('travelers');
+
+    if (dest) setDestination(dest);
+
+    if (start && end) {
+      setDateRange([
+        {
+          startDate: new Date(start),
+          endDate: new Date(end),
+          key: 'selection',
+        },
+      ]);
+      setHasSelectedDates(true);
+    }
+
+    if (trav) setTravelers(parseInt(trav));
+  }, [searchParams]);
+
   const handleSearch = () => {
     const filters: SearchParams = {
       destination,
@@ -77,7 +102,7 @@ export default function SearchBar() {
       filters.endDate = format(endOfMonth, 'yyyy-MM-dd');
     }
 
-    // Aquí llamas a tu servicio
+    /* Aquí llamas a tu servicio
     travelService
       .searchPackages(filters)
       .then((data) => {
@@ -86,7 +111,17 @@ export default function SearchBar() {
       })
       .catch((error) => {
         console.error(error);
-      });
+      });*/
+
+    const query = new URLSearchParams({
+      ...(filters.destination && { destination: filters.destination }),
+      ...(filters.startDate && { startDate: filters.startDate }),
+      ...(filters.endDate && { endDate: filters.endDate }),
+      travelers: String(filters.travelers),
+    }).toString();
+
+    // redirigir a la página de resultados
+    router.push(`/search?${query}`);
   };
 
   const handleClearDates = () => {
