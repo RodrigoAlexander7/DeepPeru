@@ -1,54 +1,154 @@
+// src/components/travel/ResultCard.tsx
 'use client';
 
-import { PackageCard } from '@/types';
+import { TouristPackage } from '@/types';
 
 interface ResultCardProps {
-  package: PackageCard;
+  package: TouristPackage;
 }
 
 export default function ResultCard({ package: pkg }: ResultCardProps) {
-  return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-      {/* Imagen o fondo de color sólido */}
-      <div className="relative h-48 bg-gray-200">
-        {/* Badge si existe */}
-        {pkg.badge && (
-          <span
-            className={`
-              absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold text-white z-10
-              ${pkg.badge === 'Premium' ? 'bg-red-500' : 'bg-green-500'}
-            `}
-          >
-            {pkg.badge}
-          </span>
-        )}
+  console.log('paquetes recivbidos', pkg);
+  // Obtener precio (primer pricing activo)
+  const pricing =
+    pkg.PricingOption?.find((p) => p.isActive) || pkg.PricingOption?.[0];
+  const price = pricing?.basePrice || 0;
+  const discountedPrice = pricing?.discountedPrice;
 
-        {/* Imagen o fondo gris si no hay imagen */}
-        {pkg.image ? (
+  // Obtener imagen (media primaria)
+  const primaryMedia = pkg.Media?.find((m) => m.isPrimary);
+  const image = primaryMedia?.url || pkg.Media?.[0]?.url;
+
+  // Obtener ubicación
+  const location = pkg.representativeCity
+    ? `${pkg.representativeCity.name}, ${pkg.representativeCity.region?.name || 'Perú'}`
+    : 'Ubicación no especificada';
+
+  // Obtener fechas del primer schedule
+  const schedule = pkg.Schedule?.find((s) => s.isActive) || pkg.Schedule?.[0];
+
+  // Formatear duración
+  const formatDuration = (duration: string) => {
+    return duration
+      .replace(/h/gi, ' horas')
+      .replace(/D/gi, ' días')
+      .replace(/N/gi, ' noches')
+      .replace(/day/gi, ' día');
+  };
+
+  // Color de dificultad
+  const getDifficultyColor = (difficulty: string) => {
+    const colors: Record<string, string> = {
+      EASY: 'bg-green-100 text-green-700',
+      MODERATE: 'bg-yellow-100 text-yellow-700',
+      CHALLENGING: 'bg-orange-100 text-orange-700',
+      EXTREME: 'bg-red-100 text-red-700',
+    };
+    return colors[difficulty] || 'bg-gray-100 text-gray-700';
+  };
+
+  // Traducir dificultad
+  const difficultyLabels: Record<string, string> = {
+    EASY: 'Fácil',
+    MODERATE: 'Moderado',
+    CHALLENGING: 'Desafiante',
+    EXTREME: 'Extremo',
+  };
+
+  // Determinar badge
+  const badge =
+    discountedPrice && discountedPrice < price
+      ? 'New'
+      : pkg.rating >= 4.5
+        ? 'Premium'
+        : undefined;
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:scale-[1.02] duration-300">
+      {/* Image */}
+      <div className="relative h-56">
+        {image ? (
           <img
-            src={pkg.image}
-            alt={pkg.title}
+            src={image}
+            alt={pkg.name}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
           />
-        ) : (
-          <div className="w-full h-full bg-gray-400" />
+        ) : null}
+
+        {/* Fallback gradient */}
+        <div
+          className={`w-full h-full bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 ${image ? 'hidden' : ''}`}
+        />
+
+        {/* Badges */}
+        <div className="absolute top-3 left-3 flex gap-2">
+          {badge && (
+            <span
+              className={`
+              px-3 py-1 rounded-full text-xs font-semibold text-white backdrop-blur-sm
+              ${badge === 'Premium' ? 'bg-red-500' : 'bg-green-500'}
+            `}
+            >
+              {badge}
+            </span>
+          )}
+
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(pkg.difficulty)}`}
+          >
+            {difficultyLabels[pkg.difficulty] || pkg.difficulty}
+          </span>
+        </div>
+
+        {/* Rating */}
+        {pkg.rating > 0 && (
+          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1">
+            <svg
+              className="w-4 h-4 text-yellow-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+            <span className="text-sm font-semibold text-gray-700">
+              {pkg.rating.toFixed(1)}
+            </span>
+          </div>
         )}
       </div>
 
-      {/* Contenido */}
-      <div className="p-4">
-        {/* Título */}
-        <h3 className="font-bold text-gray-900 text-lg mb-1 line-clamp-2">
-          {pkg.title}
+      {/* Content */}
+      <div className="p-5">
+        {/* Title */}
+        <h3 className="font-bold text-gray-900 text-xl mb-2 line-clamp-2 min-h-[3.5rem]">
+          {pkg.name}
         </h3>
 
-        {/* Compañía */}
-        <p className="text-sm text-gray-600 mb-3">{pkg.company}</p>
+        {/* Company with logo */}
+        <div className="flex items-center gap-2 mb-3">
+          {pkg.TourismCompany?.logoUrl && (
+            <img
+              src={pkg.TourismCompany.logoUrl}
+              alt={pkg.TourismCompany.name}
+              className="w-6 h-6 rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          )}
+          <p className="text-sm text-gray-600 line-clamp-1">
+            {pkg.TourismCompany?.name || 'Compañía desconocida'}
+          </p>
+        </div>
 
-        {/* Ubicación */}
-        <div className="flex items-center gap-1 text-sm text-gray-500 mb-3">
+        {/* Location */}
+        <div className="flex items-center gap-1 text-sm text-gray-500 mb-2">
           <svg
-            className="w-4 h-4"
+            className="w-4 h-4 flex-shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -66,13 +166,13 @@ export default function ResultCard({ package: pkg }: ResultCardProps) {
               d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
             />
           </svg>
-          <span className="line-clamp-1">{pkg.location}</span>
+          <span className="line-clamp-1">{location}</span>
         </div>
 
-        {/* Fechas */}
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+        {/* Duration */}
+        <div className="flex items-center gap-1 text-sm text-gray-500 mb-4">
           <svg
-            className="w-4 h-4"
+            className="w-4 h-4 flex-shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -81,34 +181,45 @@ export default function ResultCard({ package: pkg }: ResultCardProps) {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <span>
-            {new Date(pkg.startDate).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            })}
-            {' - '}
-            {new Date(pkg.endDate).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            })}
-          </span>
+          <span>{formatDuration(pkg.duration)}</span>
         </div>
 
-        {/* Precio */}
+        {/* Description */}
+        <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[2.5rem]">
+          {pkg.description}
+        </p>
+
+        {/* Price */}
         <div className="flex items-center justify-between mb-4">
-          <span className="text-xl font-bold text-red-500">${pkg.price}</span>
+          <div>
+            {discountedPrice && discountedPrice < price ? (
+              <>
+                <span className="text-lg text-gray-400 line-through mr-2">
+                  ${price}
+                </span>
+                <span className="text-2xl font-bold text-red-500">
+                  ${discountedPrice}
+                </span>
+              </>
+            ) : (
+              <span className="text-2xl font-bold text-red-500">${price}</span>
+            )}
+          </div>
         </div>
 
-        {/* Botón de acción*/}
+        {/* Action Button */}
         <button
-          onClick={() => console.log('Reservar:', pkg.id)}
-          className="w-full bg-pink-100 hover:bg-pink-200 text-pink-600 font-medium py-2.5 rounded-full transition-colors"
+          onClick={() => {
+            console.log('Ver detalles del paquete:', pkg.id);
+            // Aquí puedes navegar a la página de detalles
+            // router.push(`/package/${pkg.id}`);
+          }}
+          className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-full transition-colors"
         >
-          Ver Detalles
+          Ver detalles
         </button>
       </div>
     </div>

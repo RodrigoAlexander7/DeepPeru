@@ -102,7 +102,7 @@ export default function SearchBar() {
       filters.endDate = format(endOfMonth, 'yyyy-MM-dd');
     }
 
-    /* Aquí llamas a tu servicio
+    /*Aquí llamas a tu servicio
     travelService
       .searchPackages(filters)
       .then((data) => {

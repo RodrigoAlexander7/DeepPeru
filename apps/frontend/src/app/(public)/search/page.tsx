@@ -6,11 +6,12 @@ import SearchBar from '@/components/search/SearchBar';
 import ResultCard from '@/components/travel/ResultCard';
 import { PackageCard } from '@/types';
 import { travelService } from '@/features/travel/travelService';
+import { TouristPackage } from '@/types';
 
 export default function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [packages, setPackages] = useState<PackageCard[]>([]);
+  const [packages, setPackages] = useState<TouristPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -33,6 +34,11 @@ export default function SearchPage() {
     performSearch();
   }, [destination, startDate, endDate, travelers]);
 
+  useEffect(() => {
+    console.log('Página actual:', currentPage);
+    console.log('startIndex:', startIndex);
+    console.log('endIndex:', endIndex);
+  }, [currentPage, packages]);
   const performSearch = async () => {
     setLoading(true);
     try {
@@ -43,11 +49,13 @@ export default function SearchPage() {
         endDate: endDate || undefined,
         travelers: travelers ? parseInt(travelers) : undefined,
       });
-
-      setPackages(results);
+      console.log('RESULTADOS:', results);
+      console.log('Paquetes actuales:', packages);
+      setPackages(results.data);
       setCurrentPage(1); // Reset a primera página
     } catch (error) {
       console.error('Error al buscar paquetes:', error);
+      // En producción, mostrarías un toast o mensaje de error
     } finally {
       setLoading(false);
     }
@@ -63,7 +71,7 @@ export default function SearchPage() {
             onClick={() => router.push('/')}
           >
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg" />
-            <span className="text-xl font-bold text-gray-900">DeepPeru</span>
+            <span className="text-xl font-bold text-gray-900">TravelEase</span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -115,7 +123,7 @@ export default function SearchPage() {
         <div className="relative z-10 w-full px-4">
           <div className="container mx-auto">
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-8 text-center">
-              ¿Adónde irás?
+              Where will you go?
             </h1>
             <SearchBar />
           </div>
@@ -127,7 +135,7 @@ export default function SearchPage() {
         {/* Encabezado de resultados */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Resultados de la búsqueda
+            Search Results
           </h2>
           <p className="text-gray-600">
             {loading ? (
@@ -136,9 +144,9 @@ export default function SearchPage() {
               'No results found'
             ) : (
               <>
-                Mostrando {startIndex + 1}-{Math.min(endIndex, packages.length)}{' '}
-                de {packages.length} resultados
-                {destination && ` para "${destination}"`}
+                Showing {startIndex + 1}-{Math.min(endIndex, packages.length)}{' '}
+                of {packages.length} results
+                {destination && ` for "${destination}"`}
               </>
             )}
           </p>
@@ -172,17 +180,16 @@ export default function SearchPage() {
               />
             </svg>
             <h3 className="text-xl font-bold text-gray-900 mb-2">
-              No se encontraron resultados
+              No results found
             </h3>
             <p className="text-gray-600 mb-4">
-              Intenta ajustar tus criterios de búsqueda o explora paquetes
-              populares
+              Try adjusting your search criteria or explore popular packages
             </p>
             <button
               onClick={() => router.push('/')}
               className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-full font-medium transition-colors"
             >
-              Volver a la página principal
+              Back to Home
             </button>
           </div>
         ) : (
@@ -193,7 +200,6 @@ export default function SearchPage() {
                 <ResultCard key={pkg.id} package={pkg} />
               ))}
             </div>
-
             {/* Paginación */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2">
@@ -291,7 +297,7 @@ export default function SearchPage() {
         )}
       </section>
 
-      {/* Sugerencias relacionadas  */}
+      {/* Sugerencias relacionadas (solo si hay resultados) */}
       {!loading && packages.length > 0 && (
         <section className="bg-white py-12 border-t">
           <div className="container mx-auto px-4">
@@ -299,32 +305,64 @@ export default function SearchPage() {
               {/* Mismo destino, diferentes fechas */}
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  Mismo lugar, fechas diferentes
+                  Same Location, Different Dates
                 </h3>
                 <div className="space-y-4">
                   {[
                     {
-                      title: 'Cusco & Rainbow Mountain',
-                      dates: 'Aug 15 - Aug 20',
+                      title: 'Cusco & Sacred Valley',
+                      dates: 'Dec 10 - Dec 15, 2025',
                       location: 'Cusco, Peru',
+                      price: 1350,
+                      company: 'Inca Trails Peru',
                     },
                     {
-                      title: 'Cusco City Explorer',
-                      dates: 'Sep 5 - Sep 10',
+                      title: 'Machu Picchu Express',
+                      dates: 'Jan 20 - Jan 25, 2026',
                       location: 'Cusco, Peru',
+                      price: 1800,
+                      company: 'Peru Adventures',
+                    },
+                    {
+                      title: 'Rainbow Mountain Trek',
+                      dates: 'Feb 5 - Feb 8, 2026',
+                      location: 'Cusco, Peru',
+                      price: 890,
+                      company: 'Andean Explorers',
                     },
                   ].map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors"
+                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors group"
                       onClick={() => console.log('Navigate to:', item.title)}
                     >
-                      <div className="flex items-center gap-4 p-4 bg-gray-400 rounded-xl hover:bg-gray-500 cursor-pointer transition-colors" />
-                      <div className="flex-1">
-                        <h4 className="font-bold text-gray-900">
+                      <div className="w-24 h-24 bg-gradient-to-br from-orange-400 via-pink-400 to-purple-500 rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 mb-1 line-clamp-1">
                           {item.title}
                         </h4>
-                        <p className="text-sm text-gray-600">{item.dates}</p>
+                        <p className="text-sm text-gray-600 mb-1">
+                          {item.company}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                          <span>{item.dates}</span>
+                        </div>
+                        <span className="text-red-500 font-bold">
+                          ${item.price}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -334,33 +372,64 @@ export default function SearchPage() {
               {/* Otros destinos, mismas fechas */}
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  Otras ubicaciones, mismas fechas
+                  Other Locations, Same Dates
                 </h3>
                 <div className="space-y-4">
                   {[
                     {
-                      title: 'Nazca Lines Flyover',
-                      dates: 'Jul 10 - Jul 17',
-                      location: 'Nazca, Peru',
+                      title: 'Amazon Jungle Expedition',
+                      dates: 'Mar 15 - Mar 20, 2026',
+                      location: 'Iquitos, Peru',
+                      price: 1450,
+                      company: 'Jungle Expeditions',
                     },
                     {
-                      title: 'Huacachina Desert Adventure',
-                      dates: 'Jul 10 - Jul 17',
-                      location: 'Ica, Peru',
+                      title: 'Paracas & Ballestas Islands',
+                      dates: 'Mar 15 - Mar 20, 2026',
+                      location: 'Paracas, Peru',
+                      price: 950,
+                      company: 'Coastal Adventures',
+                    },
+                    {
+                      title: 'Colca Canyon Adventure',
+                      dates: 'Mar 15 - Mar 20, 2026',
+                      location: 'Arequipa, Peru',
+                      price: 1100,
+                      company: 'Andean Explorers',
                     },
                   ].map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors"
+                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors group"
                       onClick={() => console.log('Navigate to:', item.title)}
                     >
-                      <div className="flex items-center gap-4 p-4 bg-gray-400 rounded-xl hover:bg-gray-500 cursor-pointer transition-colors" />
-
-                      <div className="flex-1">
-                        <h4 className="font-bold text-gray-900">
+                      <div className="w-24 h-24 bg-gradient-to-br from-blue-400 via-cyan-400 to-green-500 rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 mb-1 line-clamp-1">
                           {item.title}
                         </h4>
-                        <p className="text-sm text-gray-600">{item.dates}</p>
+                        <p className="text-sm text-gray-600 mb-1">
+                          {item.company}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                            />
+                          </svg>
+                          <span className="line-clamp-1">{item.location}</span>
+                        </div>
+                        <span className="text-red-500 font-bold">
+                          ${item.price}
+                        </span>
                       </div>
                     </div>
                   ))}

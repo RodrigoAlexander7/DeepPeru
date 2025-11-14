@@ -7,7 +7,7 @@ export interface SearchParams {
   travelers?: number; // Número de personas
 }
 
-// Paquete Turístico (TouristPackage)
+/* Paquete Turístico (TouristPackage)
 export interface TouristPackage {
   TouristPackage_ID: string;
   Name: string;
@@ -25,7 +25,7 @@ export interface TouristPackage {
   Company?: Company;
   Location?: Location;
   Activities?: Activity[];
-}
+}*/
 
 // Compañía (Company)
 export interface Company {
@@ -69,4 +69,72 @@ export interface PackageCard {
   endDate: string;
   image?: string;
   badge?: 'Premium' | 'New';
+}
+
+export interface TouristPackage {
+  id: number;
+  companyId: number;
+  name: string;
+  description: string;
+  duration: string;
+  difficulty: 'EASY' | 'MODERATE' | 'CHALLENGING' | 'EXTREME';
+  type: 'GROUP' | 'PRIVATE' | 'CUSTOM';
+  rating: number;
+  minAge: number | null;
+  maxAge: number | null;
+  minParticipants: number | null;
+  maxParticipants: number | null;
+  meetingPoint: string;
+  meetingLatitude: number;
+  meetingLongitude: number;
+  includedItems: string[];
+  excludedItems: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+
+  // Relaciones
+  TourismCompany: {
+    id: number;
+    name: string;
+    logoUrl: string;
+    rating: number;
+  };
+  representativeCity: {
+    id: number;
+    name: string;
+    regionId: number;
+    region: {
+      id: number;
+      name: string;
+      stateId: number;
+    };
+  };
+  PricingOption: Array<{
+    id: number;
+    packageId: number;
+    name: string;
+    description: string;
+    basePrice: number;
+    discountedPrice: number | null;
+    currencyId: number;
+    isActive: boolean;
+  }>;
+  Media: Array<{
+    id: number;
+    packageId: number;
+    type: string;
+    url: string;
+    caption: string | null;
+    displayOrder: number;
+    isPrimary: boolean;
+  }>;
+  Schedule: Array<{
+    id: number;
+    packageId: number;
+    startDate: string;
+    endDate: string;
+    availableSlots: number;
+    isActive: boolean;
+  }>;
 }
