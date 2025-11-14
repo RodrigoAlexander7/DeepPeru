@@ -35,17 +35,17 @@ export default function HomePage() {
             className="mt-24 text-center"
           >
             <h3 className="text-xl font-semibold text-white">
-              ¿Listo para tu próxima aventura?
+              Ready for your next adventure?
             </h3>
             <p className="mt-3 text-sm text-gray-400 max-w-xl mx-auto">
-              Estamos expandiendo nuestra plataforma para ofrecerte más
-              destinos, actividades y experiencias inolvidables.
+              We are expanding our platform to offer you more destinations,
+              activities and unforgettable experiences.
             </p>
             <a
               href="/packages"
               className="inline-block mt-6 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-semibold shadow-[0_6px_28px_-6px_rgba(79,70,229,0.5)] hover:shadow-[0_8px_36px_-6px_rgba(79,70,229,0.6)] hover:from-purple-500 hover:to-blue-500 transition-all"
             >
-              Explorar paquetes
+              Explore packages
             </a>
           </motion.div>
         </div>
