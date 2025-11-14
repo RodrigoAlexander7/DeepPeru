@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import SearchBar from '@/components/search/SearchBar';
 import ResultCard from '@/components/travel/ResultCard';
 import { PackageCard } from '@/types';
-import { travelService } from '@/features/travel/travel.service';
+import { travelService } from '@/features/travel/travelService';
 
 export default function SearchPage() {
   const router = useRouter();

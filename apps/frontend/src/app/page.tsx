@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import SearchBar from '@/components/search/SearchBar';
 import PackageCard from '@/components/travel/PackageCard';
 import { PackageCard as PackageCardType } from '@/types';
-import { travelService } from '@/features/travel/travel.service';
+import { travelService } from '@/features/travel/travelService';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
@@ -18,8 +18,8 @@ export default function Home() {
 
   const loadPopularPackages = async () => {
     try {
-      const data = await travelService.getPopularPackages();
-      setPackages(data);
+      //      const data = await travelService.getPopularPackages();
+      //      setPackages(data);
     } catch (error) {
       console.error('Error loading packages:', error);
     } finally {

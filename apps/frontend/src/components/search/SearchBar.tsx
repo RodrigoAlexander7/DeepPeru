@@ -8,6 +8,8 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
+import { travelService } from '@/features/travel/travelService';
+import { SearchParams } from '@/types';
 
 export default function SearchBar() {
   const router = useRouter();
@@ -52,13 +54,14 @@ export default function SearchBar() {
   }, []);
 
   const handleSearch = () => {
-    const params = new URLSearchParams();
-
-    if (destination) params.set('destination', destination);
+    const filters: SearchParams = {
+      destination,
+      travelers,
+    };
 
     if (activeTab === 'exact') {
-      params.set('startDate', format(dateRange[0].startDate, 'yyyy-MM-dd'));
-      params.set('endDate', format(dateRange[0].endDate, 'yyyy-MM-dd'));
+      filters.startDate = format(dateRange[0].startDate, 'yyyy-MM-dd');
+      filters.endDate = format(dateRange[0].endDate, 'yyyy-MM-dd');
     } else if (selectedMonth) {
       const startOfMonth = new Date(
         selectedMonth.getFullYear(),
@@ -70,15 +73,20 @@ export default function SearchBar() {
         selectedMonth.getMonth() + 1,
         0,
       );
-      params.set('startDate', format(startOfMonth, 'yyyy-MM-dd'));
-      params.set('endDate', format(endOfMonth, 'yyyy-MM-dd'));
+      filters.startDate = format(startOfMonth, 'yyyy-MM-dd');
+      filters.endDate = format(endOfMonth, 'yyyy-MM-dd');
     }
 
-    params.set('travelers', travelers.toString());
-
-    router.push(`/search?${params.toString()}`);
-    setShowDatePicker(false);
-    setShowTravelersPicker(false);
+    // Aquí llamas a tu servicio
+    travelService
+      .searchPackages(filters)
+      .then((data) => {
+        // manejar resultados
+        console.log(data);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
   };
 
   const handleClearDates = () => {
@@ -117,7 +125,10 @@ export default function SearchBar() {
   return (
     <div className="bg-white rounded-full p-2 flex items-center gap-2 flex-wrap md:flex-nowrap max-w-4xl mx-auto shadow-lg">
       {/* Destination */}
-      <div className="flex items-center gap-2 px-4 flex-1 min-w-[200px] group">
+      <div
+        className="flex items-center gap-2 px-2 flex-1 
+                min-w-[120px] md:min-w-[200px] flex-shrink group"
+      >
         <svg
           className="w-5 h-5 text-gray-600 group-hover:text-red-500 transition-colors"
           fill="none"
@@ -153,7 +164,8 @@ export default function SearchBar() {
 
       {/* Date Range Picker */}
       <div
-        className="relative flex-1 min-w-[350px] border-l border-gray-200"
+        className="relative flex-1 flex-shrink 
+                min-w-[200px] md:min-w-[350px] border-l border-gray-200"
         ref={datePickerRef}
       >
         <button
@@ -178,7 +190,7 @@ export default function SearchBar() {
         </button>
 
         {showDatePicker && (
-          <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl z-500 overflow-hidden">
+          <div className="absolute top-full left-0 mt-6 bg-white rounded-2xl shadow-2xl z-500 overflow-hidden">
             {/* Tabs */}
             <div className="flex border-b">
               <button
@@ -283,7 +295,8 @@ export default function SearchBar() {
 
       {/* Travelers */}
       <div
-        className="relative flex-1 min-w-[150px] border-l border-gray-200"
+        className="relative flex-1 flex-shrink 
+                min-w-[100px] md:min-w-[150px] border-l border-gray-200"
         ref={travelersRef}
       >
         <button
@@ -311,7 +324,7 @@ export default function SearchBar() {
         </button>
 
         {showTravelersPicker && (
-          <div className="absolute top-full left-0 mt-2 bg-white text-black rounded-2xl shadow-2xl z-50 p-4 w-64">
+          <div className="absolute top-full left-0 mt-6 bg-white text-black rounded-2xl shadow-2xl z-50 p-4 w-64">
             <div className="flex items-center justify-between mb-4">
               <span className="font-medium text-gray-900">Pasajeros</span>
             </div>
