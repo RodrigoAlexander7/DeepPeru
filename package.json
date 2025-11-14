@@ -27,6 +27,7 @@
     ]
   },
   "dependencies": {
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@nestjs/swagger": "^11.2.1",
     "lodash": "^4.17.21",
     "swagger-ui-express": "^5.0.1"
