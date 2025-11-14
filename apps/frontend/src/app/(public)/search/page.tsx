@@ -7,6 +7,7 @@ import ResultCard from '@/components/travel/ResultCard';
 import { PackageCard } from '@/types';
 import { travelService } from '@/features/travel/travelService';
 import { TouristPackage } from '@/types';
+import { Header, Footer } from '@/components/layout';
 
 export default function SearchPage() {
   const router = useRouter();
@@ -64,71 +65,29 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <div className="relative">
+        <Header variant="transparent" />
+
+        {/* Hero con barra de búsqueda */}
+        <section className="relative h-[300px] flex items-center justify-center">
           <div
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => router.push('/')}
-          >
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg" />
-            <span className="text-xl font-bold text-gray-900">TravelEase</span>
-          </div>
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.05)), url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600)',
+            }}
+          />
 
-          <div className="flex items-center gap-4">
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <svg
-                className="w-6 h-6 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                />
-              </svg>
-            </button>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <svg
-                className="w-6 h-6 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-            </button>
-            <div className="w-8 h-8 bg-gray-300 rounded-full" />
+          <div className="relative z-10 w-full px-4">
+            <div className="container mx-auto">
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-8 text-center">
+                Where will you go?
+              </h1>
+              <SearchBar />
+            </div>
           </div>
-        </div>
-      </header>
-
-      {/* Hero con barra de búsqueda */}
-      <section className="relative h-[300px] flex items-center justify-center">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600)',
-          }}
-        />
-
-        <div className="relative z-10 w-full px-4">
-          <div className="container mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-8 text-center">
-              Where will you go?
-            </h1>
-            <SearchBar />
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       {/* Resultados de búsqueda */}
       <section className="container mx-auto px-4 py-12">
