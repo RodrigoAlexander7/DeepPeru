@@ -8,6 +8,8 @@ import { PackageCard } from '@/types';
 import { travelService } from '@/features/travel/travelService';
 import { TouristPackage } from '@/types';
 
+import Footer from '@/components/ui/Footer';
+
 export default function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -439,6 +441,7 @@ export default function SearchPage() {
           </div>
         </section>
       )}
+      <Footer />
     </div>
   );
 }

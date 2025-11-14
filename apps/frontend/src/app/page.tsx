@@ -6,6 +6,7 @@ import PackageCard from '@/components/travel/PackageCard';
 import { PackageCard as PackageCardType } from '@/types';
 import { travelService } from '@/features/travel/travelService';
 import { useRouter } from 'next/navigation';
+import Footer from '@/components/ui/Footer';
 
 export default function Home() {
   const [packages, setPackages] = useState<PackageCardType[]>([]);
@@ -121,6 +122,8 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      <Footer />
     </div>
   );
 }
