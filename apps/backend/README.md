@@ -25,6 +25,27 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## API Documentation
+
+### Tourist Package Search
+
+The application includes a flexible search endpoint for tourist packages, similar to Airbnb's search functionality. See detailed documentation:
+
+- **[Search API Documentation](./docs/SEARCH_API.md)** - Complete guide on search parameters and usage
+- **[Search Examples](./docs/search-examples.http)** - HTTP request examples ready to use
+
+**Quick Example:**
+
+```bash
+GET /tourist-packages/search?destination=Cusco&travelers=4&startDate=2025-06-01&endDate=2025-06-15
+```
+
+For interactive API documentation, run the application and visit:
+
+```
+http://localhost:3000/api
+```
+
 ## Project setup
 
 ```bash
