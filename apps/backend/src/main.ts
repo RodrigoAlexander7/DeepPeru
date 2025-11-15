@@ -19,7 +19,13 @@ const developerDocumentation = (app: INestApplication) => {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable global validation pipe
+  // Habilitar CORS para tu frontend
+  app.enableCors({
+    origin: 'http://localhost:4000', // permite solo tu frontend
+    credentials: true, // si usas cookies o auth headers
+  });
+
+  // Validación global
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

@@ -27,6 +27,8 @@
     ]
   },
   "dependencies": {
-    "lodash": "^4.17.21"
+    "@nestjs/swagger": "^11.2.1",
+    "lodash": "^4.17.21",
+    "swagger-ui-express": "^5.0.1"
   }
 }
