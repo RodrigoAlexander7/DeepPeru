@@ -869,13 +869,6 @@ async function createData() {
       isActive?: boolean;
     }>;
     benefits?: Array<{ iconUrl?: string; title: string; order?: number }>;
-    features?: Array<{
-      category?: string;
-      iconUrl?: string;
-      name: string;
-      description?: string;
-      order?: number;
-    }>;
     media?: Array<{
       type?: 'IMAGE' | 'VIDEO';
       url: string;
@@ -883,18 +876,6 @@ async function createData() {
       order?: number;
       isPrimary?: boolean;
     }>;
-    itinerary?: {
-      title?: string;
-      days?: number;
-      items: Array<{
-        dayNumber: number;
-        title: string;
-        description?: string;
-        startTime?: string;
-        endTime?: string;
-        order?: number;
-      }>;
-    };
     pickup?: {
       isHotelPickupAvailable?: boolean;
       pickupRadiusKm?: number;
@@ -902,13 +883,27 @@ async function createData() {
       pickupEndTime?: string;
       instructions?: string;
     };
-    schedule?: {
-      timezone: string;
-      daysOfWeek: ('MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN')[];
-      startTime: string;
-      endTime?: string;
-      notes?: string;
-    };
+    activities?: Array<{
+      name: string;
+      description?: string;
+      destinationCityId: number;
+      startDate: string | Date;
+      endDate: string | Date;
+      schedules?: Array<{
+        timezone: string;
+        daysOfWeek: ('MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN')[];
+        startTime: string;
+        endTime?: string;
+        notes?: string;
+      }>;
+      features?: Array<{
+        category?: string;
+        iconUrl?: string;
+        name: string;
+        description?: string;
+        order?: number;
+      }>;
+    }>;
     translations?: {
       en?: {
         name?: string;
@@ -939,11 +934,9 @@ async function createData() {
       locations = [],
       pricing,
       benefits = [],
-      features = [],
       media = [],
-      itinerary,
       pickup,
-      schedule,
+      activities = [],
       translations,
       includedItems = [],
       excludedItems = [],
@@ -1020,11 +1013,68 @@ async function createData() {
       });
     }
 
-    await prisma.feature.deleteMany({ where: { packageId: pkg.id } });
-    if (features.length) {
-      await prisma.feature.createMany({
-        data: features.map((f) => ({ ...f, packageId: pkg.id })),
+    // Activities and their schedules/features, then link to package
+    // First, unlink removed activities by design? For simplicity, we upsert provided and ensure linkage
+    for (const act of activities) {
+      let activity = await prisma.activity.findFirst({
+        where: {
+          name: act.name,
+          destinationCityId: act.destinationCityId,
+        },
       });
+      if (!activity) {
+        activity = await prisma.activity.create({
+          data: {
+            name: act.name,
+            description: act.description,
+            destinationCityId: act.destinationCityId,
+            startDate: new Date(act.startDate),
+            endDate: new Date(act.endDate),
+          },
+        });
+      } else {
+        activity = await prisma.activity.update({
+          where: { id: activity.id },
+          data: {
+            description: act.description,
+            destinationCityId: act.destinationCityId,
+            startDate: new Date(act.startDate),
+            endDate: new Date(act.endDate),
+          },
+        });
+      }
+
+      // Link to package (idempotent via composite PK)
+      await prisma.touristPackageActivity.upsert({
+        where: {
+          packageId_activityId: { packageId: pkg.id, activityId: activity.id },
+        },
+        update: {},
+        create: { packageId: pkg.id, activityId: activity.id },
+      });
+
+      // Reset and seed activity schedules
+      await prisma.schedule.deleteMany({ where: { activityId: activity.id } });
+      if (act.schedules?.length) {
+        await prisma.schedule.createMany({
+          data: act.schedules.map((s) => ({
+            activityId: activity.id,
+            timezone: s.timezone,
+            daysOfWeek: s.daysOfWeek,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            notes: s.notes,
+          })),
+        });
+      }
+
+      // Reset and seed activity features
+      await prisma.feature.deleteMany({ where: { activityId: activity.id } });
+      if (act.features?.length) {
+        await prisma.feature.createMany({
+          data: act.features.map((f) => ({ ...f, activityId: activity.id })),
+        });
+      }
     }
 
     await prisma.media.deleteMany({ where: { packageId: pkg.id } });
@@ -1057,43 +1107,7 @@ async function createData() {
       });
     }
 
-    await prisma.schedule.deleteMany({ where: { packageId: pkg.id } });
-    if (schedule) {
-      await prisma.schedule.create({
-        data: { packageId: pkg.id, ...schedule },
-      });
-    }
-
-    // Itinerary
-    const existingItins2 = await prisma.itinerary.findMany({
-      where: { packageId: pkg.id },
-      select: { id: true },
-    });
-    if (existingItins2.length) {
-      await prisma.itineraryItem.deleteMany({
-        where: { itineraryId: { in: existingItins2.map((i) => i.id) } },
-      });
-      await prisma.itinerary.deleteMany({
-        where: { id: { in: existingItins2.map((i) => i.id) } },
-      });
-    }
-    if (itinerary) {
-      const newItin = await prisma.itinerary.create({
-        data: {
-          packageId: pkg.id,
-          title: itinerary.title,
-          days: itinerary.days,
-        },
-      });
-      if (itinerary.items?.length) {
-        await prisma.itineraryItem.createMany({
-          data: itinerary.items.map((it) => ({
-            ...it,
-            itineraryId: newItin.id,
-          })),
-        });
-      }
-    }
+    // Note: Itinerary and package-level schedule removed in favor of Activity + Schedule
 
     // Normalized locations
     await clearPackageLocations(pkg.id);
@@ -1251,12 +1265,58 @@ async function createData() {
     ],
   });
 
-  // Features (idempotent)
-  await prisma.feature.deleteMany({ where: { packageId: pkg.id } });
+  // Create activities for this package and attach features/schedules
+  // Activity: Machu Picchu Guided Visit
+  let mpActivity = await prisma.activity.findFirst({
+    where: {
+      name: 'Machu Picchu Guided Visit',
+      destinationCityId: cuscoCity.id,
+    },
+  });
+  if (!mpActivity) {
+    mpActivity = await prisma.activity.create({
+      data: {
+        name: 'Machu Picchu Guided Visit',
+        description: 'Guided tour inside Machu Picchu citadel.',
+        destinationCityId: cuscoCity.id,
+        startDate: new Date('2025-01-01T00:00:00.000Z'),
+        endDate: new Date('2025-12-31T23:59:59.000Z'),
+      },
+    });
+  } else {
+    mpActivity = await prisma.activity.update({
+      where: { id: mpActivity.id },
+      data: {
+        description: 'Guided tour inside Machu Picchu citadel.',
+        destinationCityId: cuscoCity.id,
+        startDate: new Date('2025-01-01T00:00:00.000Z'),
+        endDate: new Date('2025-12-31T23:59:59.000Z'),
+      },
+    });
+  }
+  await prisma.touristPackageActivity.upsert({
+    where: {
+      packageId_activityId: { packageId: pkg.id, activityId: mpActivity.id },
+    },
+    update: {},
+    create: { packageId: pkg.id, activityId: mpActivity.id },
+  });
+  await prisma.schedule.deleteMany({ where: { activityId: mpActivity.id } });
+  await prisma.schedule.create({
+    data: {
+      activityId: mpActivity.id,
+      timezone: 'America/Lima',
+      daysOfWeek: ['MON', 'WED', 'FRI'],
+      startTime: '05:00',
+      endTime: '17:00',
+      notes: 'Subject to availability and weather conditions',
+    },
+  });
+  await prisma.feature.deleteMany({ where: { activityId: mpActivity.id } });
   await prisma.feature.createMany({
     data: [
       {
-        packageId: pkg.id,
+        activityId: mpActivity.id,
         category: 'Comfort',
         iconUrl: 'https://picsum.photos/seed/feat1/64',
         name: 'Modern trains',
@@ -1264,7 +1324,7 @@ async function createData() {
         order: 1,
       },
       {
-        packageId: pkg.id,
+        activityId: mpActivity.id,
         category: 'Guide',
         iconUrl: 'https://picsum.photos/seed/feat2/64',
         name: 'Bilingual guide',
@@ -1274,53 +1334,7 @@ async function createData() {
     ],
   });
 
-  // Itinerary and items (idempotent)
-  const existingItins = await prisma.itinerary.findMany({
-    where: { packageId: pkg.id },
-    select: { id: true },
-  });
-  if (existingItins.length) {
-    await prisma.itineraryItem.deleteMany({
-      where: { itineraryId: { in: existingItins.map((i) => i.id) } },
-    });
-    await prisma.itinerary.deleteMany({
-      where: { id: { in: existingItins.map((i) => i.id) } },
-    });
-  }
-  const itin = await prisma.itinerary.create({
-    data: { packageId: pkg.id, title: 'Full Day Itinerary', days: 1 },
-  });
-  await prisma.itineraryItem.createMany({
-    data: [
-      {
-        itineraryId: itin.id,
-        dayNumber: 1,
-        title: 'Departure from Cusco',
-        description: 'Early morning pickup',
-        startTime: '05:00',
-        endTime: '06:00',
-        order: 1,
-      },
-      {
-        itineraryId: itin.id,
-        dayNumber: 1,
-        title: 'Train to Aguas Calientes',
-        description: 'Scenic train ride',
-        startTime: '06:30',
-        endTime: '08:30',
-        order: 2,
-      },
-      {
-        itineraryId: itin.id,
-        dayNumber: 1,
-        title: 'Machu Picchu Tour',
-        description: 'Guided visit',
-        startTime: '09:00',
-        endTime: '12:00',
-        order: 3,
-      },
-    ],
-  });
+  // Itinerary removed
 
   // Media (idempotent)
   await prisma.media.deleteMany({ where: { packageId: pkg.id } });
@@ -1396,18 +1410,7 @@ async function createData() {
     ],
   });
 
-  // Schedule (idempotent)
-  await prisma.schedule.deleteMany({ where: { packageId: pkg.id } });
-  await prisma.schedule.create({
-    data: {
-      packageId: pkg.id,
-      timezone: 'America/Lima',
-      daysOfWeek: ['MON', 'WED', 'FRI'],
-      startTime: '05:00',
-      endTime: '17:00',
-      notes: 'Subject to availability and weather conditions',
-    },
-  });
+  // Package-level schedule removed in favor of activity schedules
 
   // Auth tables (idempotent examples)
   await prisma.account.upsert({
@@ -1516,14 +1519,6 @@ async function createData() {
       { title: 'Small group', order: 1 },
       { title: 'Local guide', order: 2 },
     ],
-    features: [
-      {
-        category: 'Transport',
-        name: 'Air-conditioned van',
-        description: 'Comfortable seats',
-        order: 1,
-      },
-    ],
     media: [
       {
         url: 'https://picsum.photos/seed/sacred1/800/600',
@@ -1537,36 +1532,6 @@ async function createData() {
         order: 2,
       },
     ],
-    itinerary: {
-      title: 'Day tour',
-      days: 1,
-      items: [
-        {
-          dayNumber: 1,
-          title: 'Cusco to Pisac',
-          description: 'Visit market',
-          startTime: '08:00',
-          endTime: '10:30',
-          order: 1,
-        },
-        {
-          dayNumber: 1,
-          title: 'Pisac ruins',
-          description: 'Guided visit',
-          startTime: '11:00',
-          endTime: '12:30',
-          order: 2,
-        },
-        {
-          dayNumber: 1,
-          title: 'Ollantaytambo',
-          description: 'Fortress visit',
-          startTime: '14:00',
-          endTime: '16:00',
-          order: 3,
-        },
-      ],
-    },
     pickup: {
       isHotelPickupAvailable: true,
       pickupRadiusKm: 5,
@@ -1574,12 +1539,31 @@ async function createData() {
       pickupEndTime: '08:00',
       instructions: 'Wait in lobby',
     },
-    schedule: {
-      timezone: 'America/Lima',
-      daysOfWeek: ['MON', 'WED', 'FRI'],
-      startTime: '08:00',
-      endTime: '18:00',
-    },
+    activities: [
+      {
+        name: 'Pisac Market Visit',
+        description: 'Explore Pisac traditional market and ruins.',
+        destinationCityId: pisacCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['MON', 'WED', 'FRI'],
+            startTime: '08:00',
+            endTime: '12:00',
+          },
+        ],
+        features: [
+          {
+            category: 'Transport',
+            name: 'Air-conditioned van',
+            description: 'Comfortable seats',
+            order: 1,
+          },
+        ],
+      },
+    ],
     translations: {
       en: {
         name: 'Sacred Valley Explorer',
@@ -1631,32 +1615,23 @@ async function createData() {
         isPrimary: true,
       },
     ],
-    itinerary: {
-      title: 'Day hike',
-      days: 1,
-      items: [
-        {
-          dayNumber: 1,
-          title: 'Drive from Cusco',
-          startTime: '04:00',
-          endTime: '06:30',
-          order: 1,
-        },
-        {
-          dayNumber: 1,
-          title: 'Ascent to summit',
-          startTime: '07:00',
-          endTime: '10:00',
-          order: 2,
-        },
-      ],
-    },
-    schedule: {
-      timezone: 'America/Lima',
-      daysOfWeek: ['TUE', 'THU', 'SAT'],
-      startTime: '04:00',
-      endTime: '18:00',
-    },
+    activities: [
+      {
+        name: 'Vinicunca Summit Trek',
+        description: 'Challenging hike to Rainbow Mountain summit.',
+        destinationCityId: cuscoCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['TUE', 'THU', 'SAT'],
+            startTime: '04:00',
+            endTime: '18:00',
+          },
+        ],
+      },
+    ],
     translations: {
       en: { name: 'Rainbow Mountain Trek', description: 'Hike to Vinicunca.' },
       es: {
@@ -1704,32 +1679,23 @@ async function createData() {
         isPrimary: true,
       },
     ],
-    itinerary: {
-      title: 'Short trail',
-      days: 2,
-      items: [
-        {
-          dayNumber: 1,
-          title: 'Km104 to Wiñay Wayna',
-          startTime: '07:00',
-          endTime: '15:00',
-          order: 1,
-        },
-        {
-          dayNumber: 2,
-          title: 'Sun Gate to Machu Picchu',
-          startTime: '05:00',
-          endTime: '12:00',
-          order: 2,
-        },
-      ],
-    },
-    schedule: {
-      timezone: 'America/Lima',
-      daysOfWeek: ['MON', 'THU'],
-      startTime: '07:00',
-      endTime: '12:00',
-    },
+    activities: [
+      {
+        name: 'Short Inca Trail Hike',
+        description: 'Hike from Km104 to Machu Picchu over 2 days.',
+        destinationCityId: cuscoCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['MON', 'THU'],
+            startTime: '07:00',
+            endTime: '12:00',
+          },
+        ],
+      },
+    ],
     translations: {
       en: { name: 'Inca Trail 2D1N', description: 'Short Inca Trail.' },
       es: { name: 'Camino Inca 2D1N', description: 'Camino Inca corto.' },
@@ -1771,25 +1737,23 @@ async function createData() {
         isPrimary: true,
       },
     ],
-    itinerary: {
-      title: 'Day hike',
-      days: 1,
-      items: [
-        {
-          dayNumber: 1,
-          title: 'Drive and hike',
-          startTime: '04:00',
-          endTime: '16:00',
-          order: 1,
-        },
-      ],
-    },
-    schedule: {
-      timezone: 'America/Lima',
-      daysOfWeek: ['TUE', 'FRI', 'SUN'],
-      startTime: '04:00',
-      endTime: '17:00',
-    },
+    activities: [
+      {
+        name: 'Humantay Lake Hike',
+        description: 'Day hike to Humantay Lake from Cusco.',
+        destinationCityId: cuscoCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['TUE', 'FRI', 'SUN'],
+            startTime: '04:00',
+            endTime: '17:00',
+          },
+        ],
+      },
+    ],
     translations: {
       en: {
         name: 'Humantay Lake Day Hike',
@@ -1839,32 +1803,23 @@ async function createData() {
         isPrimary: true,
       },
     ],
-    itinerary: {
-      title: 'Walking tour',
-      days: 1,
-      items: [
-        {
-          dayNumber: 1,
-          title: 'Cathedral and Plaza',
-          startTime: '09:00',
-          endTime: '10:30',
-          order: 1,
-        },
-        {
-          dayNumber: 1,
-          title: 'Government Palace (outside)',
-          startTime: '10:30',
-          endTime: '11:00',
-          order: 2,
-        },
-      ],
-    },
-    schedule: {
-      timezone: 'America/Lima',
-      daysOfWeek: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
-      startTime: '09:00',
-      endTime: '13:00',
-    },
+    activities: [
+      {
+        name: 'Historic Center Walking Tour',
+        description: 'Guided walk through Lima historic center.',
+        destinationCityId: limaCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
+            startTime: '09:00',
+            endTime: '13:00',
+          },
+        ],
+      },
+    ],
     translations: {
       en: {
         name: 'Lima Historic Center Walking Tour',
@@ -1916,32 +1871,23 @@ async function createData() {
         isPrimary: true,
       },
     ],
-    itinerary: {
-      title: 'Bike route',
-      days: 1,
-      items: [
-        {
-          dayNumber: 1,
-          title: 'Miraflores Malecón',
-          startTime: '10:00',
-          endTime: '11:00',
-          order: 1,
-        },
-        {
-          dayNumber: 1,
-          title: 'Barranco Bridge of Sighs',
-          startTime: '11:15',
-          endTime: '12:00',
-          order: 2,
-        },
-      ],
-    },
-    schedule: {
-      timezone: 'America/Lima',
-      daysOfWeek: ['SAT', 'SUN'],
-      startTime: '10:00',
-      endTime: '13:00',
-    },
+    activities: [
+      {
+        name: 'Miraflores & Barranco Coastal Bike',
+        description: 'Ride along Costa Verde and Barranco highlights.',
+        destinationCityId: mirafloresCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['SAT', 'SUN'],
+            startTime: '10:00',
+            endTime: '13:00',
+          },
+        ],
+      },
+    ],
     translations: {
       en: {
         name: 'Miraflores & Barranco Bike Tour',
@@ -1990,25 +1936,23 @@ async function createData() {
         isPrimary: true,
       },
     ],
-    itinerary: {
-      title: 'City tour',
-      days: 1,
-      items: [
-        {
-          dayNumber: 1,
-          title: 'Corcovado & Sugarloaf',
-          startTime: '08:00',
-          endTime: '16:00',
-          order: 1,
-        },
-      ],
-    },
-    schedule: {
-      timezone: 'America/Sao_Paulo',
-      daysOfWeek: ['MON', 'WED', 'FRI'],
-      startTime: '08:00',
-      endTime: '17:00',
-    },
+    activities: [
+      {
+        name: 'Rio Highlights Tour',
+        description: 'Christ the Redeemer, Sugarloaf, Copacabana.',
+        destinationCityId: rioCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Sao_Paulo',
+            daysOfWeek: ['MON', 'WED', 'FRI'],
+            startTime: '08:00',
+            endTime: '17:00',
+          },
+        ],
+      },
+    ],
     translations: {
       en: {
         name: 'Rio de Janeiro Highlights',
@@ -2056,25 +2000,23 @@ async function createData() {
         isPrimary: true,
       },
     ],
-    itinerary: {
-      title: 'City + Wine',
-      days: 1,
-      items: [
-        {
-          dayNumber: 1,
-          title: 'City center + winery',
-          startTime: '09:00',
-          endTime: '17:00',
-          order: 1,
-        },
-      ],
-    },
-    schedule: {
-      timezone: 'America/Santiago',
-      daysOfWeek: ['TUE', 'THU', 'SAT'],
-      startTime: '09:00',
-      endTime: '17:30',
-    },
+    activities: [
+      {
+        name: 'Santiago City and Winery Tour',
+        description: 'City landmarks followed by winery visit.',
+        destinationCityId: santiagoCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Santiago',
+            daysOfWeek: ['TUE', 'THU', 'SAT'],
+            startTime: '09:00',
+            endTime: '17:30',
+          },
+        ],
+      },
+    ],
     translations: {
       en: {
         name: 'Santiago City and Wine',
@@ -2089,15 +2031,16 @@ async function createData() {
 
 async function deleteData() {
   // Delete in dependency-safe order
-  await prisma.itineraryItem.deleteMany();
-  await prisma.itinerary.deleteMany();
   await prisma.benefit.deleteMany();
+  // Activity-linked data first
+  await prisma.schedule.deleteMany();
   await prisma.feature.deleteMany();
+  await prisma.touristPackageActivity.deleteMany();
+  await prisma.activity.deleteMany();
   await prisma.media.deleteMany();
   await prisma.packageLanguage.deleteMany();
   await prisma.pickupDetail.deleteMany();
   await prisma.pricingOption.deleteMany();
-  await prisma.schedule.deleteMany();
   await prisma.touristPackageTranslation.deleteMany();
   // Remove normalized locations before packages (raw SQL)
   await prisma.$executeRaw`DELETE FROM "PackageLocation"`;
