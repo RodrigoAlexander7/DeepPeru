@@ -1,5 +1,7 @@
 # DeepPeru
 
+Sistema intermedio para promoción de paquetes turísticos.
+
 ## Requisitos
 
 - Node.js 18+
@@ -27,10 +29,38 @@ pnpm prisma migrate dev
 
 ## Desarrollo
 
-Para backend
+### Ejecución rápida
+
+Para iniciar el backend en modo desarrollo:
 
 ```bash
-./init_backend.sh
+cd apps/backend
+./run.sh        # Modo rápido (por defecto)
+./run.sh quick  # Modo rápido (explícito)
+```
+
+Para iniciar el frontend en modo desarrollo:
+
+```bash
+cd apps/frontend
+./run.sh        # Modo rápido (por defecto)
+./run.sh quick  # Modo rápido (explícito)
+```
+
+### Ejecución completa (primera vez o después de cambios)
+
+Para backend (instala dependencias, genera cliente Prisma, ejecuta migraciones):
+
+```bash
+cd apps/backend
+./run.sh full
+```
+
+Para frontend (instala dependencias, limpia caché):
+
+```bash
+cd apps/frontend
+./run.sh full
 ```
 
 ### Comandos útiles
