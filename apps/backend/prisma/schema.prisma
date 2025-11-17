@@ -4,7 +4,7 @@ generator client {
 
 generator docs {
   provider = "node ./node_modules/prisma-docs-generator"
-  output = "../docs/prisma"
+  output   = "../docs/prisma"
 }
 
 datasource db {
@@ -60,12 +60,11 @@ model SystemAdmin {
 }
 
 model CompanyAdmin {
-  id               Int              @id @default(autoincrement())
-  userId           String           @unique
-  createdAt        DateTime         @default(now())
-  tourismCompanyId Int
-  user             User             @relation(fields: [userId], references: [id])
-  company          TourismCompany[]
+  id        Int              @id @default(autoincrement())
+  userId    String           @unique
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id])
+  company   TourismCompany[]
 }
 
 model Phone {
@@ -283,16 +282,16 @@ model RegionTranslation {
 /// Represents a city.
 /// Supports multilingual display names via CityTranslation.
 model City {
-  id           Int               @id @default(autoincrement())
-  name         String
-  regionId     Int
-  region       Region            @relation(fields: [regionId], references: [id])
-  translations CityTranslation[]
-  postalCodes  PostalCode[]
+  id                       Int               @id @default(autoincrement())
+  name                     String
+  regionId                 Int
+  region                   Region            @relation(fields: [regionId], references: [id])
+  translations             CityTranslation[]
+  postalCodes              PostalCode[]
   // Bridge relation to packages (normalized itinerary locations)
-  packageLocations       PackageLocation[]
+  packageLocations         PackageLocation[]
   // Back relation: packages that use this city as representative
-  representativeOfPackages TouristPackage[] @relation("RepresentativeCity")
+  representativeOfPackages TouristPackage[]  @relation("RepresentativeCity")
 }
 
 /// City name translations
@@ -738,18 +737,18 @@ model TouristPackageTranslation {
 /// - Use 'order' to control the visual itinerary stop order.
 model PackageLocation {
   /// FK to TouristPackage.id
-  packageId      Int
+  packageId Int
   /// FK to City.id
-  cityId         Int
+  cityId    Int
   /// Display order (lower appears first)
-  order          Int?
+  order     Int?
   /// Free-form notes for specific details
-  notes          String?
+  notes     String?
   /// Creation timestamp
-  createdAt      DateTime        @default(now())
+  createdAt DateTime @default(now())
 
-  TouristPackage TouristPackage  @relation(fields: [packageId], references: [id])
-  City           City            @relation(fields: [cityId], references: [id])
+  TouristPackage TouristPackage @relation(fields: [packageId], references: [id])
+  City           City           @relation(fields: [cityId], references: [id])
 
   @@id([packageId, cityId])
   @@index([cityId])
@@ -813,3 +812,4 @@ enum PackageType {
   PRIVATE
   SELF_GUIDED
 }
+
