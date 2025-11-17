@@ -293,6 +293,8 @@ model City {
   packageLocations       PackageLocation[]
   // Back relation: packages that use this city as representative
   representativeOfPackages TouristPackage[] @relation("RepresentativeCity")
+  // Back relation: activities whose destination is this city
+  activitiesDestination  Activity[]
 }
 
 /// City name translations
@@ -385,8 +387,8 @@ model CompanyWorker {
 /// A concrete feature of the package (amenity or attribute), grouped optionally by category.
 model Feature {
   id             Int            @id @default(autoincrement())
-  /// FK to TouristPackage.id
-  packageId      Int
+  /// FK to Activity.id
+  activityId     Int
   /// Optional grouping category (e.g., "Comfort", "Safety")
   /// Example: "Safety"
   category       String?
@@ -401,61 +403,34 @@ model Feature {
   /// Display order
   order          Int?
   createdAt      DateTime       @default(now())
-  TouristPackage TouristPackage @relation(fields: [packageId], references: [id])
+  Activity       Activity       @relation(fields: [activityId], references: [id])
 
-  @@index([packageId])
+  @@index([activityId])
 }
 
 /// High-level itinerary container (e.g., 3-day trek).
-model Itinerary {
-  id             Int             @id @default(autoincrement())
-  /// FK to TouristPackage.id
-  packageId      Int
-  /// Optional title ("Classic Route")
-  /// Example: "Sacred Valley Explorer"
-  title          String?
-  /// Number of days covered
-  /// Example: 3
-  days           Int?
-  createdAt      DateTime        @default(now())
-  TouristPackage TouristPackage  @relation(fields: [packageId], references: [id])
-  /// Ordered child day/items
-  ItineraryItem  ItineraryItem[]
-
-  @@index([packageId])
-}
-
-model ItineraryItem {
-  id          Int       @id @default(autoincrement())
-  /// FK to Itinerary.id
-  itineraryId Int
-  /// Day sequence number starting at 1
-  dayNumber   Int
-  /// Item title
-  title       String
-  /// Optional details
-  description String?
-  /// Local start time (HH:mm or free-form)
-  /// Example: "08:30"
-  startTime   String?
-  /// Local end time (HH:mm or free-form)
-  /// Example: "11:15"
-  endTime     String?
-  /// Text location name
-  /// Example: "Pisac Market"
-  location    String?
-  /// Geo latitude (WGS84)
-  /// Example: -13.42215
-  latitude    Float?
-  /// Geo longitude (WGS84)
-  /// Example: -71.85372
-  longitude   Float?
-  /// Display ordering within day
-  order       Int?
-  Itinerary   Itinerary @relation(fields: [itineraryId], references: [id])
-
-  @@index([dayNumber])
-  @@index([itineraryId])
+/// Core unit of an experience visited inside or across packages
+/// Represents a concrete attraction or activity with its own schedule
+model Activity {
+  id                 Int             @id @default(autoincrement())
+  /// Activity name
+  name               String
+  /// Optional description
+  description        String?
+  /// Destination City FK
+  destinationCityId  Int
+  /// Activity availability start
+  startDate          DateTime
+  /// Activity availability end
+  endDate            DateTime
+  /// Timestamps
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  /// Relations
+  destinationCity    City            @relation(fields: [destinationCityId], references: [id])
+  Feature            Feature[]
+  Schedule           Schedule[]
+  TouristPackageLink TouristPackageActivity[]
 }
 
 model Media {
@@ -558,8 +533,8 @@ model PricingOption {
 
 model Schedule {
   id             Int            @id @default(autoincrement())
-  /// FK to TouristPackage.id
-  packageId      Int
+  /// FK to Activity.id
+  activityId     Int
   /// IANA timezone identifier (e.g., "America/Lima")
   /// Example: "America/Lima"
   timezone       String
@@ -574,9 +549,9 @@ model Schedule {
   /// Optional notes (exceptions, seasonal info)
   /// Example: "Not available on national holidays."
   notes          String?
-  TouristPackage TouristPackage @relation(fields: [packageId], references: [id])
+  Activity       Activity       @relation(fields: [activityId], references: [id])
 
-  @@index([packageId])
+  @@index([activityId])
 }
 
 model Tourist {
@@ -674,13 +649,10 @@ model TouristPackage {
   /// Last update timestamp (manual)
   updatedAt                 DateTime
   Benefit                   Benefit[]
-  Feature                   Feature[]
-  Itinerary                 Itinerary[]
   Media                     Media[]
   PackageLanguage           PackageLanguage[]
   PickupDetail              PickupDetail[]
   PricingOption             PricingOption[]
-  Schedule                  Schedule[]
   TourismCompany            TourismCompany              @relation(fields: [companyId], references: [id])
   Language                  Language?                   @relation(fields: [languageId], references: [id])
   TouristPackageTranslation TouristPackageTranslation[]
@@ -689,6 +661,8 @@ model TouristPackage {
   representativeCity        City?                       @relation("RepresentativeCity", fields: [representativeCityId], references: [id])
   // Normalized many-to-many itinerary locations
   locations                 PackageLocation[]
+  // Association to activities via join table
+  activities                TouristPackageActivity[]
 
   @@index([companyId])
 }
@@ -755,6 +729,25 @@ model PackageLocation {
   @@index([cityId])
   @@index([packageId])
 }
+
+/// Join table between TouristPackage and Activity (M:N)
+model TouristPackageActivity {
+  /// FK to TouristPackage.id
+  packageId      Int
+  /// FK to Activity.id
+  activityId     Int
+  /// Creation timestamp
+  createdAt      DateTime       @default(now())
+
+  TouristPackage TouristPackage @relation(fields: [packageId], references: [id])
+  Activity       Activity       @relation(fields: [activityId], references: [id])
+
+  @@id([packageId, activityId])
+  @@index([activityId])
+  @@index([packageId])
+}
+
+
 
 enum Gender {
   /// Masculino
