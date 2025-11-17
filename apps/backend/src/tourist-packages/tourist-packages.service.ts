@@ -180,7 +180,22 @@ export class TouristPackagesService {
       throw new NotFoundException(`Tourist package with ID ${id} not found`);
     }
 
-    return touristPackage;
+    // Transform activities to expose contextual start/end dates at top level if desired
+    const transformed = {
+      ...touristPackage,
+      activities: touristPackage.activities.map((link) => ({
+        // preserve original link identifiers if consumers rely on them
+        activityId: link.activityId,
+        packageId: link.packageId,
+        // Association contextual dates (cast to any until Prisma client regenerated)
+        startDate: (link as any).startDate,
+        endDate: (link as any).endDate,
+        createdAt: link.createdAt,
+        Activity: link.Activity,
+      })),
+    };
+
+    return transformed;
   }
 
   /**
@@ -265,7 +280,11 @@ export class TouristPackagesService {
       },
       orderBy: { createdAt: 'asc' },
     });
-    return links.map((l) => l.Activity);
+    return links.map((l) => ({
+      ...l.Activity,
+      startDate: (l as any).startDate,
+      endDate: (l as any).endDate,
+    }));
   }
 
   /**

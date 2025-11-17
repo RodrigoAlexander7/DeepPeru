@@ -43,6 +43,11 @@ export class ActivitiesService {
       },
       orderBy: { createdAt: 'asc' },
     });
-    return links.map((l) => l.TouristPackage);
+    return links.map((l) => ({
+      ...l.TouristPackage,
+      // contextual dates for this activity within the package
+      activityStartDate: (l as any).startDate,
+      activityEndDate: (l as any).endDate,
+    }));
   }
 }

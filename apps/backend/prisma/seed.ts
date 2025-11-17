@@ -862,11 +862,15 @@ async function createData() {
       name: string;
       description?: string;
       currencyId: number;
-      amount: string;
+      // Accept both number and string for flexibility with Decimal; prefer number going forward.
+      amount: number | string;
       perPerson?: boolean;
       minParticipants?: number;
       maxParticipants?: number;
       isActive?: boolean;
+      // Optional validity window for seasonal / promotional pricing
+      validFrom?: Date | string;
+      validTo?: Date | string;
     }>;
     benefits?: Array<{ iconUrl?: string; title: string; order?: number }>;
     media?: Array<{
@@ -1013,8 +1017,8 @@ async function createData() {
       });
     }
 
-    // Activities and their schedules/features, then link to package
-    // First, unlink removed activities by design? For simplicity, we upsert provided and ensure linkage
+    // Activities and their schedules/features, then link to package with contextual start/end dates
+    // Activity itself is date-agnostic; dates live on the association row
     for (const act of activities) {
       let activity = await prisma.activity.findFirst({
         where: {
@@ -1023,42 +1027,47 @@ async function createData() {
         },
       });
       if (!activity) {
-        activity = await prisma.activity.create({
+        // Cast to any until Prisma client regenerated without start/end on Activity
+        activity = await (prisma as any).activity.create({
           data: {
             name: act.name,
             description: act.description,
             destinationCityId: act.destinationCityId,
-            startDate: new Date(act.startDate),
-            endDate: new Date(act.endDate),
           },
         });
       } else {
-        activity = await prisma.activity.update({
+        activity = await (prisma as any).activity.update({
           where: { id: activity.id },
           data: {
             description: act.description,
             destinationCityId: act.destinationCityId,
-            startDate: new Date(act.startDate),
-            endDate: new Date(act.endDate),
           },
         });
       }
 
       // Link to package (idempotent via composite PK)
-      await prisma.touristPackageActivity.upsert({
+      await (prisma as any).touristPackageActivity.upsert({
         where: {
-          packageId_activityId: { packageId: pkg.id, activityId: activity.id },
+          packageId_activityId: { packageId: pkg.id, activityId: activity!.id },
         },
-        update: {},
-        create: { packageId: pkg.id, activityId: activity.id },
+        update: {
+          startDate: new Date(act.startDate),
+          endDate: new Date(act.endDate),
+        },
+        create: {
+          packageId: pkg.id,
+          activityId: activity!.id,
+          startDate: new Date(act.startDate),
+          endDate: new Date(act.endDate),
+        },
       });
 
       // Reset and seed activity schedules
-      await prisma.schedule.deleteMany({ where: { activityId: activity.id } });
+      await prisma.schedule.deleteMany({ where: { activityId: activity!.id } });
       if (act.schedules?.length) {
         await prisma.schedule.createMany({
           data: act.schedules.map((s) => ({
-            activityId: activity.id,
+            activityId: activity!.id,
             timezone: s.timezone,
             daysOfWeek: s.daysOfWeek,
             startTime: s.startTime,
@@ -1069,10 +1078,10 @@ async function createData() {
       }
 
       // Reset and seed activity features
-      await prisma.feature.deleteMany({ where: { activityId: activity.id } });
+      await prisma.feature.deleteMany({ where: { activityId: activity!.id } });
       if (act.features?.length) {
         await prisma.feature.createMany({
-          data: act.features.map((f) => ({ ...f, activityId: activity.id })),
+          data: act.features.map((f) => ({ ...f, activityId: activity!.id })),
         });
       }
     }
@@ -1274,37 +1283,42 @@ async function createData() {
     },
   });
   if (!mpActivity) {
-    mpActivity = await prisma.activity.create({
+    // Cast to any until Prisma client regenerated with Activity dates removed
+    mpActivity = await (prisma as any).activity.create({
       data: {
         name: 'Machu Picchu Guided Visit',
         description: 'Guided tour inside Machu Picchu citadel.',
         destinationCityId: cuscoCity.id,
-        startDate: new Date('2025-01-01T00:00:00.000Z'),
-        endDate: new Date('2025-12-31T23:59:59.000Z'),
       },
     });
   } else {
-    mpActivity = await prisma.activity.update({
+    mpActivity = await (prisma as any).activity.update({
       where: { id: mpActivity.id },
       data: {
         description: 'Guided tour inside Machu Picchu citadel.',
         destinationCityId: cuscoCity.id,
-        startDate: new Date('2025-01-01T00:00:00.000Z'),
-        endDate: new Date('2025-12-31T23:59:59.000Z'),
       },
     });
   }
-  await prisma.touristPackageActivity.upsert({
+  await (prisma as any).touristPackageActivity.upsert({
     where: {
-      packageId_activityId: { packageId: pkg.id, activityId: mpActivity.id },
+      packageId_activityId: { packageId: pkg.id, activityId: mpActivity!.id },
     },
-    update: {},
-    create: { packageId: pkg.id, activityId: mpActivity.id },
+    update: {
+      startDate: new Date('2025-01-01T00:00:00.000Z'),
+      endDate: new Date('2025-12-31T23:59:59.000Z'),
+    },
+    create: {
+      packageId: pkg.id,
+      activityId: mpActivity!.id,
+      startDate: new Date('2025-01-01T00:00:00.000Z'),
+      endDate: new Date('2025-12-31T23:59:59.000Z'),
+    },
   });
-  await prisma.schedule.deleteMany({ where: { activityId: mpActivity.id } });
+  await prisma.schedule.deleteMany({ where: { activityId: mpActivity!.id } });
   await prisma.schedule.create({
     data: {
-      activityId: mpActivity.id,
+      activityId: mpActivity!.id,
       timezone: 'America/Lima',
       daysOfWeek: ['MON', 'WED', 'FRI'],
       startTime: '05:00',
@@ -1312,11 +1326,11 @@ async function createData() {
       notes: 'Subject to availability and weather conditions',
     },
   });
-  await prisma.feature.deleteMany({ where: { activityId: mpActivity.id } });
+  await prisma.feature.deleteMany({ where: { activityId: mpActivity!.id } });
   await prisma.feature.createMany({
     data: [
       {
-        activityId: mpActivity.id,
+        activityId: mpActivity!.id,
         category: 'Comfort',
         iconUrl: 'https://picsum.photos/seed/feat1/64',
         name: 'Modern trains',
@@ -1324,7 +1338,7 @@ async function createData() {
         order: 1,
       },
       {
-        activityId: mpActivity.id,
+        activityId: mpActivity!.id,
         category: 'Guide',
         iconUrl: 'https://picsum.photos/seed/feat2/64',
         name: 'Bilingual guide',
@@ -1950,6 +1964,37 @@ async function createData() {
             startTime: '08:00',
             endTime: '17:00',
           },
+          {
+            timezone: 'America/Sao_Paulo',
+            daysOfWeek: ['SAT'],
+            startTime: '09:00',
+            endTime: '18:00',
+            notes: 'Weekend extended hours',
+          },
+        ],
+        features: [
+          { category: 'Viewpoints', name: 'Sugarloaf Cable Car', order: 1 },
+          { category: 'Iconic', name: 'Christ the Redeemer Stop', order: 2 },
+        ],
+      },
+      {
+        name: 'Copacabana Sunset Walk',
+        description: 'Guided beach walk with sunset viewpoints.',
+        destinationCityId: rioCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Sao_Paulo',
+            daysOfWeek: ['MON', 'TUE', 'WED', 'THU', 'FRI'],
+            startTime: '16:30',
+            endTime: '19:30',
+            notes: 'Best light conditions',
+          },
+        ],
+        features: [
+          { category: 'Leisure', name: 'Beachfront Walk', order: 1 },
+          { category: 'Photography', name: 'Sunset Spots', order: 2 },
         ],
       },
     ],
@@ -2015,6 +2060,29 @@ async function createData() {
             endTime: '17:30',
           },
         ],
+        features: [
+          { category: 'Wine', name: 'Cellar Visit', order: 1 },
+          { category: 'Tasting', name: 'Premium Selection', order: 2 },
+        ],
+      },
+      {
+        name: 'Andes Morning Scenic Drive',
+        description: 'Panoramic viewpoints near Santiago early hours.',
+        destinationCityId: santiagoCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Santiago',
+            daysOfWeek: ['SUN'],
+            startTime: '06:30',
+            endTime: '11:30',
+            notes: 'Sunrise drive (seasonal)',
+          },
+        ],
+        features: [
+          { category: 'Scenic', name: 'Mountain Viewpoints', order: 1 },
+        ],
       },
     ],
     translations: {
@@ -2026,6 +2094,372 @@ async function createData() {
     },
     includedItems: ['Guide'],
     excludedItems: ['Wine tasting fee'],
+  });
+
+  // New enriched packages
+  await upsertTouristPackage({
+    companyId: company.id,
+    name: 'Cusco Culinary Evening',
+    description:
+      'Explore Andean fusion cuisine with local market visit and tasting menu.',
+    duration: '6h',
+    type: 'GROUP',
+    difficulty: 'EASY',
+    languageId: en.id,
+    rating: 4.7,
+    meetingPoint: 'San Pedro Market Entrance',
+    meetingLatitude: -13.5226,
+    meetingLongitude: -71.9757,
+    timezone: 'America/Lima',
+    representativeCityId: cuscoCity.id,
+    locations: [{ cityId: cuscoCity.id, order: 1 }],
+    pricing: [
+      {
+        name: 'Standard',
+        currencyId: pen.id,
+        amount: '95.00',
+        perPerson: true,
+        minParticipants: 2,
+        maxParticipants: 14,
+        validFrom: new Date('2025-01-01'),
+        validTo: new Date('2025-06-30'),
+      },
+      {
+        name: 'High Season',
+        currencyId: pen.id,
+        amount: '110.00',
+        perPerson: true,
+        minParticipants: 2,
+        maxParticipants: 14,
+        validFrom: new Date('2025-07-01'),
+        validTo: new Date('2025-12-31'),
+      },
+    ],
+    benefits: [
+      { title: 'Chef-led tasting', order: 1 },
+      { title: 'Local market immersion', order: 2 },
+    ],
+    media: [
+      {
+        url: 'https://picsum.photos/seed/cuscofood1/800/600',
+        caption: 'Market produce',
+        order: 1,
+        isPrimary: true,
+      },
+      {
+        url: 'https://picsum.photos/seed/cuscofood2/800/600',
+        caption: 'Tasting session',
+        order: 2,
+      },
+    ],
+    activities: [
+      {
+        name: 'Cusco Market Tour',
+        description: 'Guided walk through stalls: potatoes, corn, cacao.',
+        destinationCityId: cuscoCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['MON', 'WED', 'FRI'],
+            startTime: '15:00',
+            endTime: '16:30',
+          },
+        ],
+        features: [
+          { category: 'Food', name: 'Local Produce Sampling', order: 1 },
+        ],
+      },
+      {
+        name: 'Andean Fusion Dinner',
+        description: 'Multi-course tasting with native ingredients.',
+        destinationCityId: cuscoCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['MON', 'WED', 'FRI'],
+            startTime: '17:00',
+            endTime: '21:00',
+          },
+        ],
+        features: [
+          { category: 'Cuisine', name: 'Quinoa Variations', order: 1 },
+          { category: 'Cuisine', name: 'Cacao Dessert', order: 2 },
+        ],
+      },
+    ],
+    translations: {
+      en: {
+        name: 'Cusco Culinary Evening',
+        description: 'Market tour and Andean tasting menu.',
+      },
+      es: {
+        name: 'Noche Gastronómica en Cusco',
+        description: 'Recorrido por mercado y menú de degustación andino.',
+      },
+    },
+    includedItems: ['Guide', 'Dinner', 'Tasting samples'],
+    excludedItems: ['Alcoholic drinks'],
+  });
+
+  await upsertTouristPackage({
+    companyId: pacificAdventures.id,
+    name: 'Lima Gastronomy Tour',
+    description: 'Street food, ceviche workshop and dessert trail.',
+    duration: '1 day',
+    type: 'GROUP',
+    difficulty: 'EASY',
+    languageId: en.id,
+    rating: 4.8,
+    meetingPoint: 'Parque Kennedy, Miraflores',
+    meetingLatitude: -12.1196,
+    meetingLongitude: -77.0315,
+    timezone: 'America/Lima',
+    representativeCityId: limaCity.id,
+    locations: [{ cityId: limaCity.id, order: 1 }],
+    pricing: [
+      {
+        name: 'Early Bird',
+        currencyId: pen.id,
+        amount: '70.00',
+        perPerson: true,
+        validFrom: new Date('2025-01-01'),
+        validTo: new Date('2025-03-31'),
+      },
+      {
+        name: 'Standard',
+        currencyId: pen.id,
+        amount: '85.00',
+        perPerson: true,
+      },
+    ],
+    media: [
+      {
+        url: 'https://picsum.photos/seed/limaceviche/800/600',
+        caption: 'Ceviche prep',
+        order: 1,
+        isPrimary: true,
+      },
+    ],
+    activities: [
+      {
+        name: 'Ceviche Workshop',
+        description: 'Hands-on class with local chef.',
+        destinationCityId: limaCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['TUE', 'THU', 'SAT'],
+            startTime: '11:00',
+            endTime: '13:00',
+          },
+        ],
+        features: [
+          { category: 'Cooking', name: 'Fish Preparation', order: 1 },
+          { category: 'Cooking', name: 'Citrus Techniques', order: 2 },
+        ],
+      },
+      {
+        name: 'Dessert Trail',
+        description: 'Sampling Peruvian desserts in local cafés.',
+        destinationCityId: limaCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['TUE', 'THU', 'SAT'],
+            startTime: '15:00',
+            endTime: '17:30',
+          },
+        ],
+        features: [
+          { category: 'Sweet', name: 'Picarones Tasting', order: 1 },
+          { category: 'Sweet', name: 'Lucuma Ice Cream', order: 2 },
+        ],
+      },
+    ],
+    translations: {
+      en: {
+        name: 'Lima Gastronomy Tour',
+        description: 'Ceviche workshop & dessert trail.',
+      },
+      es: {
+        name: 'Tour Gastronómico Lima',
+        description: 'Taller de ceviche y ruta de postres.',
+      },
+    },
+    includedItems: ['Workshop ingredients', 'Dessert samples'],
+    excludedItems: ['Alcoholic drinks'],
+  });
+
+  await upsertTouristPackage({
+    companyId: pacificAdventures.id,
+    name: 'Rio Night Samba Experience',
+    description: 'Evening samba class and live music venue visit.',
+    duration: '5h',
+    type: 'GROUP',
+    difficulty: 'EASY',
+    languageId: en.id,
+    rating: 4.9,
+    meetingPoint: 'Lapa Arches',
+    meetingLatitude: -22.9122,
+    meetingLongitude: -43.1789,
+    timezone: 'America/Sao_Paulo',
+    representativeCityId: rioCity.id,
+    locations: [{ cityId: rioCity.id, order: 1 }],
+    pricing: [
+      {
+        name: 'Standard',
+        currencyId: brl.id,
+        amount: '190.00',
+        perPerson: true,
+      },
+    ],
+    media: [
+      {
+        url: 'https://picsum.photos/seed/samba/800/600',
+        caption: 'Samba class',
+        order: 1,
+        isPrimary: true,
+      },
+    ],
+    activities: [
+      {
+        name: 'Samba Dance Class',
+        description: 'Learn basics with professional instructor.',
+        destinationCityId: rioCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Sao_Paulo',
+            daysOfWeek: ['FRI', 'SAT'],
+            startTime: '18:00',
+            endTime: '19:30',
+          },
+        ],
+        features: [{ category: 'Dance', name: 'Beginner Friendly', order: 1 }],
+      },
+      {
+        name: 'Live Samba Venue',
+        description: 'Local club with live band and dance floor.',
+        destinationCityId: rioCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Sao_Paulo',
+            daysOfWeek: ['FRI', 'SAT'],
+            startTime: '20:00',
+            endTime: '23:00',
+            notes: 'Peak music sets after 21:00',
+          },
+        ],
+        features: [
+          { category: 'Music', name: 'Live Band', order: 1 },
+          { category: 'Atmosphere', name: 'Historic Venue', order: 2 },
+        ],
+      },
+    ],
+    translations: {
+      en: {
+        name: 'Rio Night Samba Experience',
+        description: 'Dance class & live music.',
+      },
+      es: {
+        name: 'Experiencia Nocturna Samba Río',
+        description: 'Clase y música en vivo.',
+      },
+    },
+    includedItems: ['Dance class', 'Entrance ticket'],
+    excludedItems: ['Drinks'],
+  });
+
+  await upsertTouristPackage({
+    companyId: incaTrails.id,
+    name: 'Pisac Artisan Workshop',
+    description: 'Hands-on textile and silver crafting half-day.',
+    duration: '5h',
+    type: 'GROUP',
+    difficulty: 'EASY',
+    languageId: en.id,
+    rating: 4.6,
+    meetingPoint: 'Pisac Plaza',
+    meetingLatitude: -13.4223,
+    meetingLongitude: -71.8537,
+    timezone: 'America/Lima',
+    representativeCityId: pisacCity.id,
+    locations: [{ cityId: pisacCity.id, order: 1 }],
+    pricing: [
+      {
+        name: 'Standard',
+        currencyId: pen.id,
+        amount: '65.00',
+        perPerson: true,
+      },
+    ],
+    media: [
+      {
+        url: 'https://picsum.photos/seed/pisacwork/800/600',
+        caption: 'Artisan tools',
+        order: 1,
+        isPrimary: true,
+      },
+    ],
+    activities: [
+      {
+        name: 'Textile Weaving Basics',
+        description: 'Learn traditional patterns with local artisan.',
+        destinationCityId: pisacCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['MON', 'WED'],
+            startTime: '09:00',
+            endTime: '11:30',
+          },
+        ],
+        features: [{ category: 'Craft', name: 'Loom Practice', order: 1 }],
+      },
+      {
+        name: 'Silver Jewelry Craft',
+        description: 'Create a simple ring or pendant.',
+        destinationCityId: pisacCity.id,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['MON', 'WED'],
+            startTime: '12:00',
+            endTime: '14:30',
+          },
+        ],
+        features: [
+          { category: 'Craft', name: 'Basic Silversmith Tools', order: 1 },
+        ],
+      },
+    ],
+    translations: {
+      en: {
+        name: 'Pisac Artisan Workshop',
+        description: 'Textile and silver crafting.',
+      },
+      es: {
+        name: 'Taller Artesano Pisac',
+        description: 'Textil y orfebrería.',
+      },
+    },
+    includedItems: ['Materials', 'Instruction'],
+    excludedItems: ['Lunch'],
   });
 }
 

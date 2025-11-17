@@ -419,10 +419,6 @@ model Activity {
   description        String?
   /// Destination City FK
   destinationCityId  Int
-  /// Activity availability start
-  startDate          DateTime
-  /// Activity availability end
-  endDate            DateTime
   /// Timestamps
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
@@ -736,6 +732,10 @@ model TouristPackageActivity {
   packageId      Int
   /// FK to Activity.id
   activityId     Int
+  /// Start date of the activity within the context of this package
+  startDate      DateTime
+  /// End date of the activity within the context of this package
+  endDate        DateTime
   /// Creation timestamp
   createdAt      DateTime       @default(now())
 
