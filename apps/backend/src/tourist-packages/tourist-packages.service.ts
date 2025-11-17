@@ -22,16 +22,8 @@ export class TouristPackagesService {
    * @returns Created package with all relations
    */
   async create(createDto: CreateTouristPackageDto) {
-    const {
-      pricingOptions,
-      itinerary,
-      media,
-      benefits,
-      features,
-      pickupDetail,
-      schedules,
-      ...packageData
-    } = createDto;
+    const { pricingOptions, media, benefits, pickupDetail, ...packageData } =
+      createDto;
 
     return this.prisma.$transaction(async (tx) => {
       const touristPackage = await tx.touristPackage.create({
@@ -56,34 +48,10 @@ export class TouristPackagesService {
                 create: benefits,
               }
             : undefined,
-          // Create features
-          Feature: features
-            ? {
-                create: features,
-              }
-            : undefined,
           // Create pickup detail
           PickupDetail: pickupDetail
             ? {
                 create: pickupDetail,
-              }
-            : undefined,
-          // Create schedules
-          Schedule: schedules
-            ? {
-                create: schedules,
-              }
-            : undefined,
-          // Create itinerary with items
-          Itinerary: itinerary
-            ? {
-                create: {
-                  title: itinerary.title,
-                  days: itinerary.days,
-                  ItineraryItem: {
-                    create: itinerary.items,
-                  },
-                },
               }
             : undefined,
         },
@@ -92,13 +60,15 @@ export class TouristPackagesService {
           PricingOption: true,
           Media: true,
           Benefit: true,
-          Feature: true,
           PickupDetail: true,
-          Schedule: true,
-          Itinerary: {
+          activities: {
             include: {
-              ItineraryItem: {
-                orderBy: { dayNumber: 'asc' },
+              Activity: {
+                include: {
+                  Feature: true,
+                  Schedule: true,
+                  destinationCity: true,
+                },
               },
             },
           },
@@ -194,15 +164,11 @@ export class TouristPackagesService {
         Benefit: {
           orderBy: { order: 'asc' },
         },
-        Feature: {
-          orderBy: { order: 'asc' },
-        },
         PickupDetail: true,
-        Schedule: true,
-        Itinerary: {
+        activities: {
           include: {
-            ItineraryItem: {
-              orderBy: [{ dayNumber: 'asc' }, { order: 'asc' }],
+            Activity: {
+              include: { Feature: true, Schedule: true, destinationCity: true },
             },
           },
         },
@@ -227,16 +193,8 @@ export class TouristPackagesService {
     //validate existence
     await this.findOne(id);
 
-    const {
-      pricingOptions,
-      itinerary,
-      media,
-      benefits,
-      features,
-      pickupDetail,
-      schedules,
-      ...packageData
-    } = updateDto;
+    const { pricingOptions, media, benefits, pickupDetail, ...packageData } =
+      updateDto;
 
     return this.prisma.$transaction(async (tx) => {
       // Update basic package data
@@ -273,12 +231,7 @@ export class TouristPackagesService {
       }
 
       // Update features if provided
-      if (features) {
-        await tx.feature.deleteMany({ where: { packageId: id } });
-        await tx.feature.createMany({
-          data: features.map((f) => ({ ...f, packageId: id })),
-        });
-      }
+      // (Feature creation removed; features now belong to activities)
 
       // Update pickup detail if provided
       if (pickupDetail) {
@@ -288,31 +241,31 @@ export class TouristPackagesService {
         });
       }
 
-      // Update schedules if provided
-      if (schedules) {
-        await tx.schedule.deleteMany({ where: { packageId: id } });
-        await tx.schedule.createMany({
-          data: schedules.map((s) => ({ ...s, packageId: id })),
-        });
-      }
+      // (Package-level schedules removed; schedules now belong to activities)
 
-      // Update itinerary if provided
-      if (itinerary) {
-        await tx.itinerary.deleteMany({ where: { packageId: id } });
-        await tx.itinerary.create({
-          data: {
-            packageId: id,
-            title: itinerary.title,
-            days: itinerary.days,
-            ItineraryItem: {
-              create: itinerary.items,
-            },
-          },
-        });
-      }
+      // (Itinerary removed from schema)
 
       return this.findOne(id);
     });
+  }
+
+  /**
+   * List activities for a given tourist package
+   * @param packageId - Package ID
+   */
+  async findActivitiesForPackage(packageId: number) {
+    // ensure package exists
+    await this.getPackageCompanyId(packageId);
+    const links = await this.prisma.touristPackageActivity.findMany({
+      where: { packageId },
+      include: {
+        Activity: {
+          include: { Feature: true, Schedule: true, destinationCity: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return links.map((l) => l.Activity);
   }
 
   /**

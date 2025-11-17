@@ -8,6 +8,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from './prisma/prisma.module';
 import { CompaniesModule } from './companies/companies.module';
 import { TouristPackagesModule } from './tourist-packages/tourist-packages.module';
+import { ActivitiesModule } from './activities/activities.module';
 
 @Module({
   // Imports are allways modules, not services
@@ -24,6 +25,7 @@ import { TouristPackagesModule } from './tourist-packages/tourist-packages.modul
     PrismaModule,
     CompaniesModule,
     TouristPackagesModule,
+    ActivitiesModule,
   ],
   controllers: [AppController],
   // Services by the module it self (no from other module)
