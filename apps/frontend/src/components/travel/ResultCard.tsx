@@ -2,7 +2,7 @@
 'use client';
 
 import { TouristPackage } from '@/types';
-
+import Link from 'next/link';
 interface ResultCardProps {
   package: TouristPackage;
 }
@@ -211,16 +211,18 @@ export default function ResultCard({ package: pkg }: ResultCardProps) {
         </div>
 
         {/* Action Button */}
-        <button
-          onClick={() => {
-            console.log('Ver detalles del paquete:', pkg.id);
-            // Aquí puedes navegar a la página de detalles
-            // router.push(`/package/${pkg.id}`);
-          }}
-          className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-full transition-colors"
-        >
-          Ver detalles
-        </button>
+        <Link href={`/package/${pkg.id}`}>
+          <button
+            onClick={() => {
+              console.log('Ver detalles del paquete:', pkg.id);
+              // Aquí puedes navegar a la página de detalles
+              // router.push(`/package/${pkg.id}`);
+            }}
+            className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-full transition-colors"
+          >
+            Ver detalles
+          </button>
+        </Link>
       </div>
     </div>
   );
