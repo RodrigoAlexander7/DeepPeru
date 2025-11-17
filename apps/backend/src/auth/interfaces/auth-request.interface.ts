@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { AuthenticatedUser } from './authenticated-user.interface';
 
 export interface AuthenticatedUserJwtPayload {
   sub: string;
@@ -6,5 +7,5 @@ export interface AuthenticatedUserJwtPayload {
 }
 
 export interface AuthRequest extends Request {
-  user: AuthenticatedUserJwtPayload;
+  user: AuthenticatedUser;
 }

@@ -71,7 +71,6 @@ export class CompaniesService {
       const companyAdmin = await this.prisma.companyAdmin.create({
         data: {
           userId,
-          tourismCompanyId: 0, // Temporary placeholder
         },
       });
       companyAdminId = companyAdmin.id;

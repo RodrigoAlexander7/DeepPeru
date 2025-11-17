@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuthenticatedUserJwtPayload } from './interfaces/auth-request.interface';
+import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
 
 /**
  * JWT Strategy for Passport
@@ -22,7 +23,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(payload: AuthenticatedUserJwtPayload): AuthenticatedUserJwtPayload {
-    return { sub: payload.sub, email: payload.email };
+  validate(payload: AuthenticatedUserJwtPayload): AuthenticatedUser {
+    if (!payload.sub || !payload.email) {
+      throw new Error('Invalid JWT payload: missing sub or email');
+    }
+    return { userId: payload.sub, email: payload.email };
   }
 }

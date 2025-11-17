@@ -521,7 +521,7 @@ async function createData() {
   const companyAdmin = await prisma.companyAdmin.upsert({
     where: { userId: adminUser.id },
     update: {},
-    create: { userId: adminUser.id, tourismCompanyId: 0 },
+    create: { userId: adminUser.id },
   });
 
   // Tourism Company (find-or-create by name)
@@ -550,7 +550,7 @@ async function createData() {
   // Update CompanyAdmin tourismCompanyId
   await prisma.companyAdmin.update({
     where: { id: companyAdmin.id },
-    data: { tourismCompanyId: company.id },
+    data: {},
   });
 
   // Company Translations (idempotent)
