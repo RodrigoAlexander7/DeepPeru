@@ -1,27 +1,24 @@
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 
-/**
- * JWT Strategy for Passport
- * Validates JWT tokens and extracts user payload
- */
+// This register the jwt guard on passport
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private configService: ConfigService) {
-    const secret = configService.get<string>('AUTH_SECRET');
-    if (!secret) {
-      throw new Error('AUTH_SECRET is not defined in environment variables');
-    }
+  constructor(private readonly configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: secret,
+      secretOrKey: configService.get<string>('AUTH_SECRET'), // our secret key
     });
   }
 
+  // when somethig comes to validate pasport use the settings defined on constructor
+  // then validate the jwt, if is valid call validate
+  // validate return whatever you want
   async validate(payload: any) {
-    return { id: payload.sub, email: payload.email };
+    // payload is the content of the jwt
+    return { userId: payload.sub, email: payload.email };
   }
 }

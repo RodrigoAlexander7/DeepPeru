@@ -1,10 +1,8 @@
 'use server';
 
-import { get } from 'http';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
+import { api } from '@/lib/apis';
 
 async function getAuthToken() {
   const cookieStore = await cookies();
@@ -13,22 +11,28 @@ async function getAuthToken() {
 
 /**
  * Method to get the current user from the backend using the stored auth token.
- * Normalmente, el backend Nest expone un endpoint protegido (GET /users/me) que 
+ * El backend expone un endpoint protegido (GET /users/me) que
  * devuelve los datos del usuario basándose en el token JWT
- * 
+ */
 export async function getCurrentUser() {
-   const token = await getAuthToken();
-   if (!token) {
-      return null;
-   }
-   try {
-      
-   } catch (error) {
+  const token = await getAuthToken();
+  if (!token) {
+    return null;
+  }
 
-   }
+  try {
+    const response = await api.get('/users/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    return null;
+  }
 }
-
-*/
 
 export async function logout() {
   const cookieStore = await cookies();
