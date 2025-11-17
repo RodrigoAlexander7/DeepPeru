@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateActivityDto } from '@/activities/dto/create-activity.dto';
 import { QueryActivityDto } from '@/activities/dto/query-activity.dto';
@@ -15,6 +19,16 @@ export class ActivitiesService {
     const { schedules = [], features = [], ...data } = dto;
 
     return this.prisma.$transaction(async (tx) => {
+      // Validate destination city existence to avoid FK violation (P2003)
+      const city = await tx.city.findUnique({
+        where: { id: data.destinationCityId },
+        select: { id: true },
+      });
+      if (!city) {
+        throw new NotFoundException(
+          `Destination city with id ${data.destinationCityId} not found`,
+        );
+      }
       const activity = await tx.activity.create({ data });
 
       if (schedules.length) {
@@ -31,6 +45,76 @@ export class ActivitiesService {
 
       return tx.activity.findUnique({
         where: { id: activity.id },
+        include: { Feature: true, Schedule: true, destinationCity: true },
+      });
+    });
+  }
+
+  /** Update an activity (replace schedules/features if arrays provided) */
+  async update(
+    id: number,
+    dto: Partial<{
+      name: string;
+      description?: string;
+      destinationCityId?: number;
+      schedules?: CreateActivityDto['schedules'];
+      features?: CreateActivityDto['features'];
+    }>,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.activity.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+      if (!existing) {
+        throw new NotFoundException(`Activity with ID ${id} not found`);
+      }
+
+      // If changing destination city, validate
+      if (dto.destinationCityId) {
+        const city = await tx.city.findUnique({
+          where: { id: dto.destinationCityId },
+          select: { id: true },
+        });
+        if (!city) {
+          throw new NotFoundException(
+            `Destination city with id ${dto.destinationCityId} not found`,
+          );
+        }
+      }
+
+      // Basic field updates
+      await tx.activity.update({
+        where: { id },
+        data: {
+          name: dto.name,
+          description: dto.description,
+          destinationCityId: dto.destinationCityId,
+        },
+      });
+
+      // Replace schedules if provided
+      if (dto.schedules) {
+        await tx.schedule.deleteMany({ where: { activityId: id } });
+        if (dto.schedules.length) {
+          await tx.schedule.createMany({
+            data: dto.schedules.map((s) => ({ ...s, activityId: id })),
+          });
+        }
+      }
+
+      // Replace features if provided
+      if (dto.features) {
+        await tx.feature.deleteMany({ where: { activityId: id } });
+        if (dto.features.length) {
+          await tx.feature.createMany({
+            data: dto.features.map((f) => ({ ...f, activityId: id })),
+          });
+        }
+      }
+
+      return tx.activity.findUnique({
+        where: { id },
         include: { Feature: true, Schedule: true, destinationCity: true },
       });
     });

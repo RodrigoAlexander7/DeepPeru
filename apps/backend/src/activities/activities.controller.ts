@@ -6,6 +6,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Patch,
   Query,
 } from '@nestjs/common';
 import {
@@ -17,7 +18,8 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { ActivitiesService } from './activities.service';
-import { CreateActivityDto } from '@/activities/dto/create-activity.dto';
+import { CreateActivityDto } from './dto/create-activity.dto';
+import { UpdateActivityDto } from './dto/update-activity.dto';
 import { QueryActivityDto } from '@/activities/dto/query-activity.dto';
 
 @ApiTags('Activities')
@@ -55,6 +57,22 @@ export class ActivitiesController {
   @ApiBody({ type: CreateActivityDto })
   create(@Body() dto: CreateActivityDto) {
     return this.activitiesService.create(dto);
+  }
+
+  // Update activity
+  @Patch(':id')
+  @ApiParam({ name: 'id', description: 'Activity ID', example: 1 })
+  @ApiOperation({
+    summary: 'Update activity',
+    description:
+      'Updates basic fields; if schedules/features arrays are provided, replaces them entirely.',
+  })
+  @ApiBody({ type: UpdateActivityDto })
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateActivityDto,
+  ) {
+    return this.activitiesService.update(id, dto);
   }
 
   @Get(':id/packages')

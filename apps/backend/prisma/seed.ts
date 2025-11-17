@@ -30,6 +30,16 @@ async function ensureCity(regionId: number, name: string) {
 }
 
 async function createData() {
+  // Dynamic date helpers to keep availability/pricing evergreen
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const startOfYear = new Date(Date.UTC(year, 0, 1, 0, 0, 0));
+  const endOfYear = new Date(Date.UTC(year, 11, 31, 23, 59, 59));
+  const jan1 = startOfYear;
+  const jun30 = new Date(Date.UTC(year, 5, 30, 23, 59, 59));
+  const jul1 = new Date(Date.UTC(year, 6, 1, 0, 0, 0));
+  const dec31 = endOfYear;
+  const mar31 = new Date(Date.UTC(year, 2, 31, 23, 59, 59));
   // Languages
   const [en, es] = await prisma.$transaction([
     prisma.language.upsert({
@@ -1305,14 +1315,14 @@ async function createData() {
       packageId_activityId: { packageId: pkg.id, activityId: mpActivity!.id },
     },
     update: {
-      startDate: new Date('2025-01-01T00:00:00.000Z'),
-      endDate: new Date('2025-12-31T23:59:59.000Z'),
+      startDate: startOfYear,
+      endDate: endOfYear,
     },
     create: {
       packageId: pkg.id,
       activityId: mpActivity!.id,
-      startDate: new Date('2025-01-01T00:00:00.000Z'),
-      endDate: new Date('2025-12-31T23:59:59.000Z'),
+      startDate: startOfYear,
+      endDate: endOfYear,
     },
   });
   await prisma.schedule.deleteMany({ where: { activityId: mpActivity!.id } });
@@ -1558,8 +1568,8 @@ async function createData() {
         name: 'Pisac Market Visit',
         description: 'Explore Pisac traditional market and ruins.',
         destinationCityId: pisacCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -1634,8 +1644,8 @@ async function createData() {
         name: 'Vinicunca Summit Trek',
         description: 'Challenging hike to Rainbow Mountain summit.',
         destinationCityId: cuscoCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -1698,8 +1708,8 @@ async function createData() {
         name: 'Short Inca Trail Hike',
         description: 'Hike from Km104 to Machu Picchu over 2 days.',
         destinationCityId: cuscoCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -1756,8 +1766,8 @@ async function createData() {
         name: 'Humantay Lake Hike',
         description: 'Day hike to Humantay Lake from Cusco.',
         destinationCityId: cuscoCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -1822,8 +1832,8 @@ async function createData() {
         name: 'Historic Center Walking Tour',
         description: 'Guided walk through Lima historic center.',
         destinationCityId: limaCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -1890,8 +1900,8 @@ async function createData() {
         name: 'Miraflores & Barranco Coastal Bike',
         description: 'Ride along Costa Verde and Barranco highlights.',
         destinationCityId: mirafloresCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -1955,8 +1965,8 @@ async function createData() {
         name: 'Rio Highlights Tour',
         description: 'Christ the Redeemer, Sugarloaf, Copacabana.',
         destinationCityId: rioCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Sao_Paulo',
@@ -1981,8 +1991,8 @@ async function createData() {
         name: 'Copacabana Sunset Walk',
         description: 'Guided beach walk with sunset viewpoints.',
         destinationCityId: rioCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Sao_Paulo',
@@ -2050,8 +2060,8 @@ async function createData() {
         name: 'Santiago City and Winery Tour',
         description: 'City landmarks followed by winery visit.',
         destinationCityId: santiagoCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Santiago',
@@ -2069,8 +2079,8 @@ async function createData() {
         name: 'Andes Morning Scenic Drive',
         description: 'Panoramic viewpoints near Santiago early hours.',
         destinationCityId: santiagoCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Santiago',
@@ -2099,6 +2109,94 @@ async function createData() {
   // New enriched packages
   await upsertTouristPackage({
     companyId: company.id,
+    name: 'Inca Trail 2D1N (Andes)',
+    description:
+      'Short Inca Trail Machu Picchu tour over two days with sacred views.',
+    duration: '2D1N',
+    type: 'GROUP',
+    difficulty: 'MODERATE',
+    languageId: en.id,
+    rating: 4.7,
+    meetingPoint: 'Cusco Main Square',
+    meetingLatitude: -13.5167,
+    meetingLongitude: -71.978,
+    timezone: 'America/Lima',
+    bookingCutoff: '72h before start',
+    requirements: ['Passport required'],
+    safetyInfo: 'Altitude; stay hydrated.',
+    cancellationPolicy: 'Free cancellation up to 72h before.',
+    representativeCityId: cuscoCity.id,
+    locations: [{ cityId: cuscoCity.id, order: 1 }],
+    pricing: [
+      {
+        name: 'Standard USD',
+        currencyId: usd.id,
+        amount: '300.00',
+        perPerson: true,
+        minParticipants: 2,
+        maxParticipants: 10,
+        isActive: true,
+      },
+      {
+        name: 'Standard PEN',
+        currencyId: pen.id,
+        amount: '450.00',
+        perPerson: true,
+        minParticipants: 2,
+        maxParticipants: 10,
+        isActive: true,
+      },
+    ],
+    media: [
+      {
+        url: 'https://picsum.photos/seed/andes-2d1n/800/600',
+        caption: 'Short Inca Trail',
+        order: 1,
+        isPrimary: true,
+      },
+    ],
+    pickup: {
+      isHotelPickupAvailable: true,
+      pickupRadiusKm: 5,
+      pickupStartTime: '06:30',
+      pickupEndTime: '07:00',
+      instructions: 'Be ready in the lobby 10 minutes before pickup time',
+    },
+    activities: [
+      {
+        name: 'Short Inca Trail Hike (Andes)',
+        description: 'Hike from Km104 to Machu Picchu over 2 days.',
+        destinationCityId: cuscoCity.id,
+        startDate: startOfYear,
+        endDate: endOfYear,
+        schedules: [
+          {
+            timezone: 'America/Lima',
+            daysOfWeek: ['MON', 'THU'],
+            startTime: '07:00',
+            endTime: '12:00',
+          },
+        ],
+      },
+    ],
+    translations: {
+      en: {
+        name: 'Inca Trail 2D1N (Andes)',
+        description:
+          'Short Inca Trail Machu Picchu tour over two days with sacred views.',
+      },
+      es: {
+        name: 'Camino Inca 2D1N (Andes)',
+        description:
+          'Tour Machu Picchu de Camino Inca corto en dos días con vistas sagradas.',
+      },
+    },
+    includedItems: ['Entrance tickets', 'Guide'],
+    excludedItems: ['Meals'],
+  });
+
+  await upsertTouristPackage({
+    companyId: company.id,
     name: 'Cusco Culinary Evening',
     description:
       'Explore Andean fusion cuisine with local market visit and tasting menu.',
@@ -2121,8 +2219,8 @@ async function createData() {
         perPerson: true,
         minParticipants: 2,
         maxParticipants: 14,
-        validFrom: new Date('2025-01-01'),
-        validTo: new Date('2025-06-30'),
+        validFrom: jan1,
+        validTo: jun30,
       },
       {
         name: 'High Season',
@@ -2131,8 +2229,8 @@ async function createData() {
         perPerson: true,
         minParticipants: 2,
         maxParticipants: 14,
-        validFrom: new Date('2025-07-01'),
-        validTo: new Date('2025-12-31'),
+        validFrom: jul1,
+        validTo: dec31,
       },
     ],
     benefits: [
@@ -2157,8 +2255,8 @@ async function createData() {
         name: 'Cusco Market Tour',
         description: 'Guided walk through stalls: potatoes, corn, cacao.',
         destinationCityId: cuscoCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -2175,8 +2273,8 @@ async function createData() {
         name: 'Andean Fusion Dinner',
         description: 'Multi-course tasting with native ingredients.',
         destinationCityId: cuscoCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -2226,8 +2324,8 @@ async function createData() {
         currencyId: pen.id,
         amount: '70.00',
         perPerson: true,
-        validFrom: new Date('2025-01-01'),
-        validTo: new Date('2025-03-31'),
+        validFrom: jan1,
+        validTo: mar31,
       },
       {
         name: 'Standard',
@@ -2249,8 +2347,8 @@ async function createData() {
         name: 'Ceviche Workshop',
         description: 'Hands-on class with local chef.',
         destinationCityId: limaCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -2268,8 +2366,8 @@ async function createData() {
         name: 'Dessert Trail',
         description: 'Sampling Peruvian desserts in local cafés.',
         destinationCityId: limaCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -2334,8 +2432,8 @@ async function createData() {
         name: 'Samba Dance Class',
         description: 'Learn basics with professional instructor.',
         destinationCityId: rioCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Sao_Paulo',
@@ -2350,8 +2448,8 @@ async function createData() {
         name: 'Live Samba Venue',
         description: 'Local club with live band and dance floor.',
         destinationCityId: rioCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Sao_Paulo',
@@ -2417,8 +2515,8 @@ async function createData() {
         name: 'Textile Weaving Basics',
         description: 'Learn traditional patterns with local artisan.',
         destinationCityId: pisacCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
@@ -2433,8 +2531,8 @@ async function createData() {
         name: 'Silver Jewelry Craft',
         description: 'Create a simple ring or pendant.',
         destinationCityId: pisacCity.id,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
+        startDate: startOfYear,
+        endDate: endOfYear,
         schedules: [
           {
             timezone: 'America/Lima',
