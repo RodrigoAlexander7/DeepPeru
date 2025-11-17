@@ -458,7 +458,7 @@ export class CompaniesService {
   /**
    * Get all available permissions
    */
-  async getAvailablePermissions() {
+  getAvailablePermissions() {
     return ALL_PERMISSIONS.map((permission) => ({
       name: permission,
       description: this.getPermissionDescription(permission),
