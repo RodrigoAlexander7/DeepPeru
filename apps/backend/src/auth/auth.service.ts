@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '@/users/users.service';
+import { GoogleUser } from './interfaces/google-user.interface';
 
 @Injectable()
 export class AuthService {
@@ -11,7 +12,8 @@ export class AuthService {
   ) {}
 
   //we dont use access token nor refresh tken, we create our own jwt
-  async callbackOauthGoogle({ name, email, image, accessToken, refreshToken }) {
+  async callbackOauthGoogle(googleUser: GoogleUser) {
+    const { name, email, image } = googleUser;
     console.log('EMAIL RECIBIDO:', email);
     if (!email) throw new UnauthorizedException('Email not found from Google');
 

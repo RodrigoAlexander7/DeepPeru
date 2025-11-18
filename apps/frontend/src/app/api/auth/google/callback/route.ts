@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       path: '/', // the cookie will be available in all the app
     });
 
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+    return NextResponse.redirect(new URL('/', req.url));
   } catch (error) {
     console.error('Error setting cookie:', error);
     return NextResponse.json(
