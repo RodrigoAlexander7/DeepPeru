@@ -16,7 +16,7 @@ datasource db {
 /// - Leagal identity fields are not required when the user is a tourist
 model User {
   id                String          @id @default(cuid())
-  email             String?         @unique
+  email             String          @unique
   image             String?
   /// Whether the user is active
   isActive          Boolean         @default(true)
@@ -812,4 +812,3 @@ enum PackageType {
   PRIVATE
   SELF_GUIDED
 }
-

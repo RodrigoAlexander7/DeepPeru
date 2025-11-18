@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '@/users/users.service';
 import { GoogleUser } from './interfaces/google-user.interface';
+import { AuthenticatedUserJwtPayload } from './interfaces/auth-request.interface';
 
 @Injectable()
 export class AuthService {
@@ -27,7 +28,10 @@ export class AuthService {
       });
     }
 
-    const payload = { sub: user.id, email: user.email };
+    const payload: AuthenticatedUserJwtPayload = {
+      sub: user.id,
+      email: user.email,
+    };
     const jwt = this.jwtService.sign(payload);
     console.log('JWT GENERATED:', jwt);
     return { accessToken: jwt }; // return an JWT object
