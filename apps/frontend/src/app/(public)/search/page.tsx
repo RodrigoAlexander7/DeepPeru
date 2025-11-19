@@ -74,14 +74,14 @@ export default function SearchPage() {
             className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage:
-                'linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.05)), url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600)',
+                "linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.05)), url('/images/search_background.jpg')",
             }}
           />
 
           <div className="relative z-10 w-full px-4">
             <div className="container mx-auto">
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-8 text-center">
-                Where will you go?
+                ¿Adónde irás?
               </h1>
               <SearchBar />
             </div>
@@ -94,7 +94,7 @@ export default function SearchPage() {
         {/* Encabezado de resultados */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Search Results
+            Resultados de la búsqueda
           </h2>
           <p className="text-gray-600">
             {loading ? (
@@ -103,9 +103,9 @@ export default function SearchPage() {
               'No results found'
             ) : (
               <>
-                Showing {startIndex + 1}-{Math.min(endIndex, packages.length)}{' '}
-                of {packages.length} results
-                {destination && ` for "${destination}"`}
+                Mostrando {startIndex + 1}-{Math.min(endIndex, packages.length)}{' '}
+                de {packages.length} resultados
+                {destination && ` de "${destination}"`}
               </>
             )}
           </p>

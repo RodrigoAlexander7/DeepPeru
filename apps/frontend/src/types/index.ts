@@ -59,7 +59,7 @@ export interface Activity {
 }
 
 export interface PackageCard {
-  id: string;
+  id: number;
   title: string;
   company: string;
   price: number;
@@ -69,6 +69,7 @@ export interface PackageCard {
   endDate: string;
   image?: string;
   badge?: 'Premium' | 'New';
+  rating: number;
 }
 
 export interface TouristPackage {
