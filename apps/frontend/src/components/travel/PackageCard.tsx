@@ -8,21 +8,9 @@ interface PackageCardProps {
 
 export default function PackageCard({ package: pkg }: PackageCardProps) {
   return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all">
       {/* Image */}
       <div className="relative h-48 bg-gray-200">
-        {/* Badge si existe */}
-        {pkg.badge && (
-          <span
-            className={`
-            absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-semibold text-white z-10
-            ${pkg.badge === 'Premium' ? 'bg-red-500' : 'bg-green-500'}
-          `}
-          >
-            {pkg.badge}
-          </span>
-        )}
-
         {pkg.image ? (
           <img
             src={pkg.image}
@@ -30,7 +18,7 @@ export default function PackageCard({ package: pkg }: PackageCardProps) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-grey-500" />
+          <div className="w-full h-full bg-gray-300" />
         )}
       </div>
 
@@ -42,7 +30,7 @@ export default function PackageCard({ package: pkg }: PackageCardProps) {
         </h3>
 
         {/* Company */}
-        <p className="text-sm text-gray-600 mb-3">{pkg.company}</p>
+        <p className="text-sm text-gray-600 mb-2">{pkg.company}</p>
 
         {/* Location */}
         <div className="flex items-center gap-1 text-sm text-gray-500 mb-3">
@@ -68,12 +56,12 @@ export default function PackageCard({ package: pkg }: PackageCardProps) {
           <span className="line-clamp-1">{pkg.location}</span>
         </div>
 
-        {/* Price and Rating */}
+        {/* Price */}
         <div className="flex items-center justify-between mb-4">
           <span className="text-xl font-bold text-red-500">${pkg.price}</span>
         </div>
 
-        {/* Action Button */}
+        {/* Button */}
         <button
           onClick={() => console.log('Ver detalles:', pkg.id)}
           className="w-full bg-pink-100 hover:bg-pink-200 text-pink-600 font-medium py-2.5 rounded-full transition-colors"

@@ -31,8 +31,9 @@ export default function Home() {
           image: p.Media?.[0]?.url ?? '',
           company: p.TourismCompany?.name ?? 'Sin compañía',
           companyLogo: p.TourismCompany?.logoUrl ?? '',
-          location: p.meetingPoint ?? 'Sin ubicación',
-          price: p.PricingOption?.[0]?.price ?? 0,
+          location: `${p.representativeCity?.name ?? 'Sin ciudad'}, ${p.representativeCity?.region?.name ?? 'Sin región'}`,
+          price: Number(p.PricingOption?.[0]?.amount ?? 0),
+          perPerson: p.PricingOption?.[0]?.perPerson ?? false,
           rating: p.rating ?? 0,
         })),
       );

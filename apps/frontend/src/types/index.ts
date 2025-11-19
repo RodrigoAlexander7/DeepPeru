@@ -57,12 +57,13 @@ export interface Activity {
   StartDate: string;
   EndDate: string;
 }
-
+//utilizando en paquetes populares(pag.tsx)
 export interface PackageCard {
   id: number;
   title: string;
   company: string;
   price: number;
+  perPerson?: boolean;
   location: string;
   description: string;
   startDate: string;
