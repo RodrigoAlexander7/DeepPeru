@@ -212,6 +212,26 @@ export class TouristPackagesController {
   }
 
   /**
+   * Get activities for a tourist package
+   * Public endpoint
+   */
+  @Get(':id/activities')
+  @ApiParam({ name: 'id', description: 'Tourist package ID', example: 1 })
+  @ApiOperation({
+    summary: 'List activities for a tourist package',
+    description:
+      'Returns all activities linked to the given tourist package including features and schedules.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Activities retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Tourist package not found' })
+  getActivities(@Param('id', ParseIntPipe) id: number) {
+    return this.touristPackagesService.findActivitiesForPackage(id);
+  }
+
+  /**
    * Update a tourist package
    * Requires authentication and ownership verification
    */

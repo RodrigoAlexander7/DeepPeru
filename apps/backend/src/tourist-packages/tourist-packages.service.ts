@@ -24,12 +24,10 @@ export class TouristPackagesService {
   async create(createDto: CreateTouristPackageDto) {
     const {
       pricingOptions,
-      itinerary,
       media,
       benefits,
-      features,
       pickupDetail,
-      schedules,
+      activities = [],
       ...packageData
     } = createDto;
 
@@ -56,34 +54,10 @@ export class TouristPackagesService {
                 create: benefits,
               }
             : undefined,
-          // Create features
-          Feature: features
-            ? {
-                create: features,
-              }
-            : undefined,
           // Create pickup detail
           PickupDetail: pickupDetail
             ? {
                 create: pickupDetail,
-              }
-            : undefined,
-          // Create schedules
-          Schedule: schedules
-            ? {
-                create: schedules,
-              }
-            : undefined,
-          // Create itinerary with items
-          Itinerary: itinerary
-            ? {
-                create: {
-                  title: itinerary.title,
-                  days: itinerary.days,
-                  ItineraryItem: {
-                    create: itinerary.items,
-                  },
-                },
               }
             : undefined,
         },
@@ -92,19 +66,98 @@ export class TouristPackagesService {
           PricingOption: true,
           Media: true,
           Benefit: true,
-          Feature: true,
           PickupDetail: true,
-          Schedule: true,
-          Itinerary: {
+          activities: {
             include: {
-              ItineraryItem: {
-                orderBy: { dayNumber: 'asc' },
+              Activity: {
+                include: {
+                  Feature: true,
+                  Schedule: true,
+                  destinationCity: true,
+                },
               },
             },
           },
           Language: true,
         },
       });
+
+      // Handle activities: each item links an existing activity or creates one, then associates with dates
+      for (const a of activities) {
+        // Basic validation for contextual dates
+        if (!a.startDate || !a.endDate) {
+          continue; // skip invalid entries silently; could also throw BadRequestException
+        }
+
+        let activityId: number | null = null;
+        if (a.activityId) {
+          const exists = await tx.activity.findUnique({
+            where: { id: a.activityId },
+            select: { id: true },
+          });
+          if (!exists) {
+            throw new NotFoundException(
+              `Activity with ID ${a.activityId} not found`,
+            );
+          }
+          activityId = a.activityId;
+        } else if (a.name && a.destinationCityId) {
+          // Find by unique tuple (name + destinationCity) or create
+          const found = await tx.activity.findFirst({
+            where: { name: a.name, destinationCityId: a.destinationCityId },
+            select: { id: true },
+          });
+          if (!found) {
+            const created = await tx.activity.create({
+              data: {
+                name: a.name,
+                description: a.description,
+                destinationCityId: a.destinationCityId,
+              },
+              select: { id: true },
+            });
+            activityId = created.id;
+            // Seed schedules/features for the new activity
+            if (a.schedules?.length) {
+              await tx.schedule.createMany({
+                data: a.schedules.map((s) => ({
+                  ...s,
+                  activityId: created.id,
+                })),
+              });
+            }
+            if (a.features?.length) {
+              await tx.feature.createMany({
+                data: a.features.map((f) => ({ ...f, activityId: created.id })),
+              });
+            }
+          } else {
+            activityId = found.id;
+          }
+        }
+
+        if (activityId == null) {
+          // No way to resolve activity
+          continue;
+        }
+
+        // Link package <-> activity with contextual dates (upsert on composite key)
+        await tx.touristPackageActivity.upsert({
+          where: {
+            packageId_activityId: { packageId: touristPackage.id, activityId },
+          },
+          update: {
+            startDate: new Date(a.startDate),
+            endDate: new Date(a.endDate),
+          },
+          create: {
+            packageId: touristPackage.id,
+            activityId,
+            startDate: new Date(a.startDate),
+            endDate: new Date(a.endDate),
+          },
+        });
+      }
 
       return touristPackage;
     });
@@ -194,15 +247,11 @@ export class TouristPackagesService {
         Benefit: {
           orderBy: { order: 'asc' },
         },
-        Feature: {
-          orderBy: { order: 'asc' },
-        },
         PickupDetail: true,
-        Schedule: true,
-        Itinerary: {
+        activities: {
           include: {
-            ItineraryItem: {
-              orderBy: [{ dayNumber: 'asc' }, { order: 'asc' }],
+            Activity: {
+              include: { Feature: true, Schedule: true, destinationCity: true },
             },
           },
         },
@@ -214,7 +263,22 @@ export class TouristPackagesService {
       throw new NotFoundException(`Tourist package with ID ${id} not found`);
     }
 
-    return touristPackage;
+    // Transform activities to expose contextual start/end dates at top level if desired
+    const transformed = {
+      ...touristPackage,
+      activities: touristPackage.activities.map((link) => ({
+        // preserve original link identifiers if consumers rely on them
+        activityId: link.activityId,
+        packageId: link.packageId,
+        // Association contextual dates (cast to any until Prisma client regenerated)
+        startDate: (link as any).startDate,
+        endDate: (link as any).endDate,
+        createdAt: link.createdAt,
+        Activity: link.Activity,
+      })),
+    };
+
+    return transformed;
   }
 
   /**
@@ -229,12 +293,10 @@ export class TouristPackagesService {
 
     const {
       pricingOptions,
-      itinerary,
       media,
       benefits,
-      features,
       pickupDetail,
-      schedules,
+      activities,
       ...packageData
     } = updateDto;
 
@@ -273,12 +335,7 @@ export class TouristPackagesService {
       }
 
       // Update features if provided
-      if (features) {
-        await tx.feature.deleteMany({ where: { packageId: id } });
-        await tx.feature.createMany({
-          data: features.map((f) => ({ ...f, packageId: id })),
-        });
-      }
+      // (Feature creation removed; features now belong to activities)
 
       // Update pickup detail if provided
       if (pickupDetail) {
@@ -288,31 +345,160 @@ export class TouristPackagesService {
         });
       }
 
-      // Update schedules if provided
-      if (schedules) {
-        await tx.schedule.deleteMany({ where: { packageId: id } });
-        await tx.schedule.createMany({
-          data: schedules.map((s) => ({ ...s, packageId: id })),
-        });
-      }
+      // (Package-level schedules removed; schedules now belong to activities)
 
-      // Update itinerary if provided
-      if (itinerary) {
-        await tx.itinerary.deleteMany({ where: { packageId: id } });
-        await tx.itinerary.create({
-          data: {
+      // Sync activities if provided
+      if (activities) {
+        // Map to concrete activity IDs and desired dates
+        const target: Array<{
+          activityId: number;
+          startDate: Date;
+          endDate: Date;
+          schedules?: any[];
+          features?: any[];
+        }> = [];
+
+        for (const a of activities) {
+          if (!a.startDate || !a.endDate) continue;
+
+          if (a.activityId) {
+            const exists = await tx.activity.findUnique({
+              where: { id: a.activityId },
+              select: { id: true },
+            });
+            if (!exists) {
+              throw new NotFoundException(
+                `Activity with ID ${a.activityId} not found`,
+              );
+            }
+            // Optionally update schedules/features if provided
+            if (
+              (a.schedules && a.schedules.length) ||
+              (a.features && a.features.length)
+            ) {
+              await tx.schedule.deleteMany({
+                where: { activityId: a.activityId },
+              });
+              await tx.feature.deleteMany({
+                where: { activityId: a.activityId },
+              });
+              if (a.schedules?.length) {
+                await tx.schedule.createMany({
+                  data: a.schedules.map((s) => ({
+                    ...s,
+                    activityId: a.activityId!,
+                  })),
+                });
+              }
+              if (a.features?.length) {
+                await tx.feature.createMany({
+                  data: a.features.map((f) => ({
+                    ...f,
+                    activityId: a.activityId!,
+                  })),
+                });
+              }
+            }
+            target.push({
+              activityId: a.activityId,
+              startDate: new Date(a.startDate),
+              endDate: new Date(a.endDate),
+            });
+          } else if (a.name && a.destinationCityId) {
+            const found = await tx.activity.findFirst({
+              where: { name: a.name, destinationCityId: a.destinationCityId },
+              select: { id: true },
+            });
+            let actId = found?.id;
+            if (!actId) {
+              const created = await tx.activity.create({
+                data: {
+                  name: a.name,
+                  description: a.description,
+                  destinationCityId: a.destinationCityId,
+                },
+                select: { id: true },
+              });
+              actId = created.id;
+            }
+
+            // Reset and apply schedules/features if provided
+            if (a.schedules || a.features) {
+              await tx.schedule.deleteMany({ where: { activityId: actId } });
+              await tx.feature.deleteMany({ where: { activityId: actId } });
+              if (a.schedules?.length) {
+                await tx.schedule.createMany({
+                  data: a.schedules.map((s) => ({ ...s, activityId: actId })),
+                });
+              }
+              if (a.features?.length) {
+                await tx.feature.createMany({
+                  data: a.features.map((f) => ({ ...f, activityId: actId })),
+                });
+              }
+            }
+
+            target.push({
+              activityId: actId,
+              startDate: new Date(a.startDate),
+              endDate: new Date(a.endDate),
+            });
+          }
+        }
+
+        const targetIds = target.map((t) => t.activityId);
+        // Remove links not present in target
+        await tx.touristPackageActivity.deleteMany({
+          where: {
             packageId: id,
-            title: itinerary.title,
-            days: itinerary.days,
-            ItineraryItem: {
-              create: itinerary.items,
-            },
+            ...(targetIds.length ? { activityId: { notIn: targetIds } } : {}),
           },
         });
+
+        // Upsert links for target
+        for (const t of target) {
+          await tx.touristPackageActivity.upsert({
+            where: {
+              packageId_activityId: { packageId: id, activityId: t.activityId },
+            },
+            update: { startDate: t.startDate, endDate: t.endDate },
+            create: {
+              packageId: id,
+              activityId: t.activityId,
+              startDate: t.startDate,
+              endDate: t.endDate,
+            },
+          });
+        }
       }
+
+      // (Itinerary removed from schema)
 
       return this.findOne(id);
     });
+  }
+
+  /**
+   * List activities for a given tourist package
+   * @param packageId - Package ID
+   */
+  async findActivitiesForPackage(packageId: number) {
+    // ensure package exists
+    await this.getPackageCompanyId(packageId);
+    const links = await this.prisma.touristPackageActivity.findMany({
+      where: { packageId },
+      include: {
+        Activity: {
+          include: { Feature: true, Schedule: true, destinationCity: true },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return links.map((l) => ({
+      ...l.Activity,
+      startDate: (l as any).startDate,
+      endDate: (l as any).endDate,
+    }));
   }
 
   /**
@@ -626,34 +812,31 @@ export class TouristPackagesService {
       where.maxParticipants = { lte: maxParticipants };
     }
 
-    // Destination search: search in City name, Region name via relations
+    // Location filters: combine destination, cityId, and regionId into a single OR group
+    const locationOr: Prisma.TouristPackageWhereInput[] = [] as any;
     if (destination) {
-      where.OR = [
-        // Search in representative city
+      locationOr.push(
+        // representative city by name
         {
           representativeCity: {
             name: { contains: destination, mode: 'insensitive' },
           },
-        },
-        // Search in representative city's region
+        } as any,
+        // representative city's region by name
         {
           representativeCity: {
-            region: {
-              name: { contains: destination, mode: 'insensitive' },
-            },
+            region: { name: { contains: destination, mode: 'insensitive' } },
           },
-        },
-        // Search in package locations (itinerary cities)
+        } as any,
+        // locations by city name
         {
           locations: {
             some: {
-              City: {
-                name: { contains: destination, mode: 'insensitive' },
-              },
+              City: { name: { contains: destination, mode: 'insensitive' } },
             },
           },
-        },
-        // Search in package locations' regions
+        } as any,
+        // locations by region name
         {
           locations: {
             some: {
@@ -664,54 +847,24 @@ export class TouristPackagesService {
               },
             },
           },
-        },
-      ] as any;
+        } as any,
+      );
     }
-
-    // City ID filter (exact match)
     if (cityId) {
-      const cityOrConditions = [
-        { representativeCityId: cityId },
-        {
-          locations: {
-            some: { cityId },
-          },
-        },
-      ] as any;
-
-      if (where.OR) {
-        where.AND = where.AND || [];
-        (where.AND as any[]).push({ OR: cityOrConditions });
-      } else {
-        where.OR = cityOrConditions;
-      }
+      locationOr.push(
+        { representativeCityId: cityId } as any,
+        { locations: { some: { cityId } } } as any,
+      );
     }
-
-    // Region ID filter
     if (regionId) {
-      const regionOrConditions = [
-        {
-          representativeCity: {
-            regionId,
-          },
-        },
-        {
-          locations: {
-            some: {
-              City: {
-                regionId,
-              },
-            },
-          },
-        },
-      ] as any;
-
-      if (where.OR) {
-        where.AND = where.AND || [];
-        (where.AND as any[]).push({ OR: regionOrConditions });
-      } else {
-        where.OR = regionOrConditions;
-      }
+      locationOr.push(
+        { representativeCity: { regionId } } as any,
+        { locations: { some: { City: { regionId } } } } as any,
+      );
+    }
+    if (locationOr.length > 0) {
+      where.AND = where.AND || [];
+      (where.AND as any[]).push({ OR: locationOr });
     }
 
     // Text search in name, description, included items
@@ -722,12 +875,8 @@ export class TouristPackagesService {
         { includedItems: { has: search } },
       ] as any;
 
-      if (where.OR) {
-        where.AND = where.AND || [];
-        (where.AND as any[]).push({ OR: searchOrConditions });
-      } else {
-        where.OR = searchOrConditions;
-      }
+      where.AND = where.AND || [];
+      (where.AND as any[]).push({ OR: searchOrConditions });
     }
 
     // Hotel pickup filter
@@ -737,6 +886,56 @@ export class TouristPackagesService {
           isHotelPickupAvailable: hasHotelPickup,
         },
       };
+    }
+
+    // If date filters are provided, prefilter by package-level availability derived from activities
+    // Package considered available if overall range overlaps the requested window:
+    // MIN(activity.startDate) <= end AND MAX(activity.endDate) >= start
+    let availabilityDatesByPackage: Record<
+      number,
+      { minStart: Date | null; maxEnd: Date | null }
+    > = {};
+    if (startDate || endDate) {
+      const start = startDate ?? null;
+      const end = endDate ?? null;
+      const rows = await this.prisma.$queryRaw<
+        Array<{ id: number; minStart: Date | null; maxEnd: Date | null }>
+      >(
+        Prisma.sql`SELECT t."id" AS id,
+                          MIN(tpa."startDate") AS "minStart",
+                          MAX(tpa."endDate")   AS "maxEnd"
+                    FROM "TouristPackage" t
+                    JOIN "TouristPackageActivity" tpa ON t."id" = tpa."packageId"
+                    GROUP BY t."id"
+                    HAVING (${start}::timestamptz IS NULL OR MAX(tpa."endDate") >= ${start})
+                       AND (${end}::timestamptz   IS NULL OR MIN(tpa."startDate") <= ${end})`,
+      );
+      const ids = rows.map((r) => r.id);
+      availabilityDatesByPackage = rows.reduce(
+        (acc, r) => {
+          acc[r.id] = { minStart: r.minStart, maxEnd: r.maxEnd };
+          return acc;
+        },
+        {} as Record<number, { minStart: Date | null; maxEnd: Date | null }>,
+      );
+
+      // If no packages match the availability window, short-circuit
+      if (ids.length === 0) {
+        return {
+          data: [],
+          meta: {
+            total: 0,
+            totalResults: 0,
+            page,
+            limit,
+            totalPages: 0,
+            filters: { destination, cityId, regionId, startDate, endDate },
+          },
+        };
+      }
+
+      // Constrain main where by these ids
+      where.id = { in: ids };
     }
 
     // Include relations for additional filtering and display
@@ -762,7 +961,6 @@ export class TouristPackagesService {
           region: true,
         },
       },
-      Schedule: true,
     } as const;
 
     // Fetch packages
@@ -780,12 +978,7 @@ export class TouristPackagesService {
     // Post-filtering for price range (needs to be done after fetch due to relation)
     let filteredPackages = packages;
 
-    if (
-      minPrice !== undefined ||
-      maxPrice !== undefined ||
-      startDate ||
-      endDate
-    ) {
+    if (minPrice !== undefined || maxPrice !== undefined) {
       filteredPackages = packages.filter((pkg) => {
         // Price filtering
         if (minPrice !== undefined || maxPrice !== undefined) {
@@ -802,38 +995,30 @@ export class TouristPackagesService {
           if (pricingOptions.length === 0) return false;
         }
 
-        // Date filtering via schedules and pricing options validity
-        if (startDate || endDate) {
-          const start = startDate ? new Date(startDate) : null;
-          const end = endDate ? new Date(endDate) : null;
-
-          // Check if any pricing option is valid for the date range
-          const hasValidPricing = pkg.PricingOption.some((po) => {
-            if (!po.validFrom && !po.validTo) return true; // No date restrictions
-
-            if (start && po.validTo && new Date(po.validTo) < start)
-              return false;
-            if (end && po.validFrom && new Date(po.validFrom) > end)
-              return false;
-
-            return true;
-          });
-
-          if (!hasValidPricing) return false;
-        }
-
         return true;
       });
     }
 
+    // Attach derived availability dates if present
+    const dataWithDates = filteredPackages.map((pkg) => {
+      const dates = availabilityDatesByPackage[pkg.id];
+      return dates
+        ? {
+            ...pkg,
+            packageStartDate: dates.minStart,
+            packageEndDate: dates.maxEnd,
+          }
+        : pkg;
+    });
+
     return {
-      data: filteredPackages,
+      data: dataWithDates,
       meta: {
-        total: filteredPackages.length,
+        total: dataWithDates.length,
         totalResults: total,
         page,
         limit,
-        totalPages: Math.ceil(filteredPackages.length / limit),
+        totalPages: Math.ceil(dataWithDates.length / limit),
         filters: {
           destination,
           cityId,
