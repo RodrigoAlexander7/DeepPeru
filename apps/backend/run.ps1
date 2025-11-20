@@ -22,7 +22,7 @@ switch ($Mode) {
 
         # Generar cliente Prisma
         Write-Host "Generando cliente Prisma..."
-        pnpx prisma generate
+        pnpm prisma generate
 
         # Ejecutar migraciones
         Write-Host "Ejecutando migraciones..."

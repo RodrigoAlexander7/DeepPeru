@@ -8,24 +8,24 @@
     "start": "next start"
   },
   "dependencies": {
-    "axios": "^1.12.2",
-    "date-fns": "^4.1.0",
-    "lucide-react": "^0.553.0",
+    "axios": "1.12.2",
+    "date-fns": "4.1.0",
+    "lucide-react": "0.553.0",
     "next": "15.5.4",
-    "react": "^18.3.1",
-    "react-date-range": "^2.0.1",
-    "react-dom": "^18.3.1",
-    "zustand": "^5.0.8"
+    "react": "18.3.1",
+    "react-date-range": "2.0.1",
+    "react-dom": "18.3.1",
+    "zustand": "5.0.8"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19.2.4",
-    "@types/react-dom": "^19.2.3",
-    "css-loader": "^7.1.2",
-    "mini-css-extract-plugin": "^2.9.4",
-    "style-loader": "^4.0.0",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@tailwindcss/postcss": "4",
+    "@types/node": "20",
+    "@types/react": "19.2.4",
+    "@types/react-dom": "19.2.3",
+    "css-loader": "7.1.2",
+    "mini-css-extract-plugin": "2.9.4",
+    "style-loader": "4.0.0",
+    "tailwindcss": "4",
+    "typescript": "5"
   }
 }
