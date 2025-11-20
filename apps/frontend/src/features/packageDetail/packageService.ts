@@ -58,4 +58,9 @@ export const packageService = {
     const { data } = await api.get(`/tourist-packages/${packageId}/bookings`);
     return data;
   },
+
+  async getPackageActivities(packageId: string | number) {
+    const { data } = await api.get(`/tourist-packages/${packageId}/activities`);
+    return data;
+  },
 };
