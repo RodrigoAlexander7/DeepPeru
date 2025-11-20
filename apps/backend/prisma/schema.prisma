@@ -41,15 +41,24 @@ model User {
   updatedAt         DateTime        @updatedAt
   /// The whole name comming from OAuth providers
   name              String
+  /// Preferred interface language
+  languageId        Int?
+  /// Preferred pricing currency
+  currencyId        Int?
+  /// Emergency contact phone FK
+  emergencyPhoneId  Int?
   accounts          Account[]
   companyAdmin      CompanyAdmin?
   CompanyWorker     CompanyWorker[]
   sessions          Session[]
   systemAdmin       SystemAdmin?
-  Tourist           Tourist?
   nationality       Country?        @relation("UserNationality", fields: [nationalityId], references: [id])
   passportCountry   Country?        @relation("PassportCountry", fields: [passportCountryId], references: [id])
-  phone             Phone?          @relation(fields: [phoneId], references: [id])
+  phone             Phone?          @relation("UserPhone", fields: [phoneId], references: [id])
+  emergencyPhone    Phone?          @relation("UserEmergencyPhone", fields: [emergencyPhoneId], references: [id])
+  language          Language?       @relation(fields: [languageId], references: [id])
+  currency          Currency?       @relation(fields: [currencyId], references: [id])
+  Booking           Booking[]
 }
 
 model SystemAdmin {
@@ -68,12 +77,12 @@ model CompanyAdmin {
 }
 
 model Phone {
-  id        Int       @id
-  number    String
-  countryId Int
-  country   Country   @relation(fields: [countryId], references: [id])
-  Tourist   Tourist[]
-  users     User[]
+  id             Int     @id
+  number         String
+  countryId      Int
+  country        Country @relation(fields: [countryId], references: [id])
+  users          User[]  @relation("UserPhone")
+  emergencyUsers User[]  @relation("UserEmergencyPhone")
 }
 
 model Account {
@@ -127,7 +136,7 @@ model Language {
   regionTranslations        RegionTranslation[]
   companies                 TourismCompany[]
   companyTranslations       TourismCompanyTranslation[]
-  Tourist                   Tourist[]
+  User                      User[]
   TouristPackage            TouristPackage[]
   TouristPackageTranslation TouristPackageTranslation[]
 }
@@ -334,7 +343,7 @@ model Currency {
   symbol        String?
   countries     Country[]
   PricingOption PricingOption[]
-  Tourist       Tourist[]
+  User          User[]
   Booking       Booking[]
 }
 
@@ -551,24 +560,7 @@ model Schedule {
   @@index([activityId])
 }
 
-model Tourist {
-  id               Int       @id @default(autoincrement())
-  /// FK to User.id
-  userId           String    @unique
-  /// Preferred interface language
-  /// Example: 1
-  languageId       Int?
-  /// Preferred pricing currency
-  /// Example: 2
-  currencyId       Int?
-  /// Emergency contact phone FK
-  emergencyPhoneId Int?
-  Currency         Currency? @relation(fields: [currencyId], references: [id])
-  Phone            Phone?    @relation(fields: [emergencyPhoneId], references: [id])
-  Language         Language? @relation(fields: [languageId], references: [id])
-  User             User      @relation(fields: [userId], references: [id])
-  Booking          Booking[]
-}
+/// Core product entity representing an experience/package offered.
 
 /// Core product entity representing an experience/package offered.
 /// Supports multilingual translations and structured attributes.
@@ -810,9 +802,9 @@ enum PackageType {
 
 model Booking {
   id              String @id @default(cuid())
-  touristId       Int
+  userId          String
   packageId       Int
-  pricingOptionId Int
+  pricingOptionId Int?
 
   // Payment details (Mercado Pago)
   paymentId     String?       @unique
@@ -832,12 +824,12 @@ model Booking {
   status               BookingStatus @default(PENDING)
 
   // Relations
-  Tourist        Tourist        @relation(fields: [touristId], references: [id])
+  User           User           @relation(fields: [userId], references: [id])
   TouristPackage TouristPackage @relation(fields: [packageId], references: [id])
-  PricingOption  PricingOption  @relation(fields: [pricingOptionId], references: [id])
+  PricingOption  PricingOption? @relation(fields: [pricingOptionId], references: [id])
   Currency       Currency       @relation(fields: [currencyId], references: [id])
 
-  @@index([touristId])
+  @@index([userId])
   @@index([packageId])
 }
 
