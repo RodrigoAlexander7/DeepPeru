@@ -1,35 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { Header } from '@/components/layout';
-import { Footer } from '@/components/layout';
-import BookingModal from '@/components/layout/BookingModal';
+import { useParams, useRouter } from 'next/navigation';
+import { Header, Footer } from '@/components/layout';
 import { packageService } from '@/features/packageDetail/packageService';
 import type { PackageDetail } from '@/types/PackageDetail';
-import type { Activity } from '@/types/Activity';
 
 export default function PackageDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const packageId = params.id as string;
 
   const [packageData, setPackageData] = useState<PackageDetail | null>(null);
-  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   useEffect(() => {
     const loadPackage = async () => {
       try {
         setLoading(true);
-        const [packageData, activitiesData] = await Promise.all([
-          packageService.getPackageDetail(packageId),
-          packageService.getPackageActivities(packageId).catch(() => []),
-        ]);
-        setPackageData(packageData);
-        setActivities(activitiesData);
+        const data = await packageService.getPackageDetail(packageId);
+        setPackageData(data);
+        console.log('📦 Datos del paquete cargado:', data);
+        console.log(data.activities);
       } catch (err) {
         setError('Error cargando detalles del paquete');
         console.error(err);
@@ -42,6 +35,25 @@ export default function PackageDetailPage() {
       loadPackage();
     }
   }, [packageId]);
+
+  const handleReserveNow = () => {
+    if (!packageData) return;
+
+    // Construir query params con los datos del paquete
+    const bookingParams = new URLSearchParams({
+      packageId: packageId,
+      packageName: packageData.name,
+      price: String(packageData.price ?? 0),
+      currency: packageData.currency || 'USD',
+      durationDays: String(packageData.durationDays ?? 1),
+      // Puedes agregar más datos si los necesitas
+      destinations: JSON.stringify(packageData.destinations || []),
+      image: packageData.Media?.[0]?.url ?? '',
+    });
+
+    // Navegar a la página de booking con los parámetros
+    router.push(`/booking?${bookingParams.toString()}`);
+  };
 
   if (loading) {
     return (
@@ -71,14 +83,17 @@ export default function PackageDetailPage() {
       <section
         className="relative h-96 bg-cover bg-center"
         style={{
-          backgroundImage:
-            'url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200)',
+          backgroundImage: packageData.Media?.[0]?.url
+            ? `url(${packageData.Media[0].url})`
+            : 'url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200)',
         }}
       >
         <div className="absolute inset-0 bg-black/40"></div>
         <div className="relative z-10 h-full flex flex-col justify-end p-8">
           <div className="container mx-auto">
-            <h1 className="text-5xl font-bold  mb-2">{packageData.name}</h1>
+            <h1 className="text-5xl font-bold text-white mb-2">
+              {packageData.name}
+            </h1>
             <p className="text-xl text-gray-100">
               {packageData.durationDays} días
             </p>
@@ -123,156 +138,69 @@ export default function PackageDetailPage() {
               )}
 
             {/* Itinerario */}
-            {packageData.itinerary && packageData.itinerary.length > 0 && (
+            {packageData.activities && packageData.activities.length > 0 && (
               <div className="bg-white rounded-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Itinerario
+                  Actividades
                 </h2>
-                <div className="space-y-4">
-                  {packageData.itinerary.map((item) => (
-                    <div
-                      key={item.day}
-                      className="border-l-4 border-red-500 pl-4"
-                    >
-                      <h3 className="font-bold text-gray-900">
-                        Día {item.day}
-                        {item.title && ` - ${item.title}`}
-                      </h3>
-                      <ul className="list-disc list-inside text-gray-600 mt-2 space-y-1">
-                        {item.activities.map((activity, j) => (
-                          <li key={j}>{activity}</li>
-                        ))}
-                      </ul>
-                    </div>
+
+                <ul className="list-disc list-inside text-gray-700 space-y-2">
+                  {packageData.activities.map((act, index) => (
+                    <li key={index}>
+                      <span className="font-semibold">{act.Activity.name}</span>
+                      {act.Activity.description && (
+                        <span className="text-gray-500">
+                          {' '}
+                          — {act.Activity.description}
+                        </span>
+                      )}
+                    </li>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Actividades incluidas */}
-            {activities && activities.length > 0 && (
-              <div className="bg-white rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Actividades Incluidas
-                </h2>
-                <div className="space-y-4">
-                  {activities.map((activity) => (
-                    <div
-                      key={activity.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h3 className="font-bold text-gray-900 text-lg">
-                            {activity.name}
-                          </h3>
-                          {activity.destinationCity && (
-                            <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                />
-                              </svg>
-                              <span>{activity.destinationCity.name}</span>
-                            </div>
-                          )}
-                        </div>
-                        <Link
-                          href={`/activity/${activity.id}`}
-                          className="text-red-500 hover:text-red-600 text-sm font-medium"
-                        >
-                          Ver detalles →
-                        </Link>
-                      </div>
-
-                      {activity.description && (
-                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                          {activity.description}
-                        </p>
-                      )}
-
-                      {/* Features */}
-                      {activity.features && activity.features.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {activity.features.slice(0, 4).map((feature) => (
-                            <span
-                              key={feature.id}
-                              className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full"
-                            >
-                              {feature.name}
-                            </span>
-                          ))}
-                          {activity.features.length > 4 && (
-                            <span className="text-xs text-gray-500">
-                              +{activity.features.length - 4} más
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Horarios */}
-                      {activity.schedules && activity.schedules.length > 0 && (
-                        <div className="text-xs text-gray-600">
-                          <span className="font-medium">Horarios:</span>{' '}
-                          {activity.schedules[0].daysOfWeek.join(', ')} -{' '}
-                          {activity.schedules[0].startTime}
-                          {activity.schedules[0].endTime &&
-                            ` - ${activity.schedules[0].endTime}`}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                </ul>
               </div>
             )}
 
             {/* Incluye / Excluye */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {packageData.inclusions && packageData.inclusions.length > 0 && (
-                <div className="bg-white rounded-lg p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    Incluye
-                  </h3>
-                  <ul className="space-y-2">
-                    {packageData.inclusions.map((inc, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-2 text-gray-600"
-                      >
-                        <span className="text-green-500 font-bold">✓</span>
-                        {inc}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {packageData.includedItems &&
+                packageData.includedItems.length > 0 && (
+                  <div className="bg-white rounded-lg p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                      Incluye
+                    </h3>
+                    <ul className="space-y-2">
+                      {packageData.includedItems.map((inc, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 text-gray-600"
+                        >
+                          <span className="text-green-500 font-bold">✓</span>
+                          {inc}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-              {packageData.exclusions && packageData.exclusions.length > 0 && (
-                <div className="bg-white rounded-lg p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    No Incluye
-                  </h3>
-                  <ul className="space-y-2">
-                    {packageData.exclusions.map((exc, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-2 text-gray-600"
-                      >
-                        <span className="text-red-500 font-bold">✗</span>
-                        {exc}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {packageData.excludedItems &&
+                packageData.excludedItems.length > 0 && (
+                  <div className="bg-white rounded-lg p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                      No Incluye
+                    </h3>
+                    <ul className="space-y-2">
+                      {packageData.excludedItems.map((exc, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 text-gray-600"
+                        >
+                          <span className="text-red-500 font-bold">✗</span>
+                          {exc}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
             </div>
 
             {/* Reviews */}
@@ -289,7 +217,7 @@ export default function PackageDetailPage() {
                           {review.userName || 'Usuario'}
                         </p>
                         <div className="flex text-yellow-400">
-                          {'★'.repeat(review.rating)}{' '}
+                          {'★'.repeat(review.rating)}
                           {'☆'.repeat(5 - review.rating)}
                         </div>
                       </div>
@@ -335,9 +263,10 @@ export default function PackageDetailPage() {
                 </div>
               </div>
 
+              {/* BOTÓN DE RESERVA ACTUALIZADO */}
               <button
-                onClick={() => setIsBookingModalOpen(true)}
-                className="w-full bg-red-500 hover:bg-red-600 font-bold py-3 rounded-lg transition-colors mb-3"
+                onClick={handleReserveNow}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors mb-3"
               >
                 Reservar Ahora
               </button>
@@ -349,18 +278,6 @@ export default function PackageDetailPage() {
           </div>
         </div>
       </section>
-
-      {/* Modal de reserva */}
-      <BookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        packageId={packageId}
-        packageName={packageData.name}
-        packagePrice={packageData.price ?? 0}
-        durationDays={packageData.durationDays}
-        itinerary={packageData.itinerary}
-        inclusions={packageData.inclusions}
-      />
 
       <Footer />
     </div>
