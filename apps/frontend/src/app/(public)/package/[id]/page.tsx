@@ -22,7 +22,7 @@ export default function PackageDetailPage() {
         const data = await packageService.getPackageDetail(packageId);
         setPackageData(data);
         console.log('📦 Datos del paquete cargado:', data);
-        console.log(data.activities);
+        console.log('💰 PricingOption:', data.PricingOption);
       } catch (err) {
         setError('Error cargando detalles del paquete');
         console.error(err);
@@ -39,15 +39,46 @@ export default function PackageDetailPage() {
   const handleReserveNow = () => {
     if (!packageData) return;
 
+    // Obtener el precio desde PricingOption
+    const priceOption = packageData.PricingOption?.[0];
+    const price = priceOption?.amount ? parseFloat(priceOption.amount) : 0;
+    const currency = priceOption?.currencyId === 2 ? 'PEN' : 'USD';
+    const pricingName = priceOption?.name || 'Standard';
+
+    const payload = {
+      packageId: packageId,
+      packageName: packageData.name,
+      price: price,
+      currency: currency,
+      pricingName: pricingName,
+      durationDays: packageData.durationDays ?? 1,
+      description: packageData.description || '',
+      image: packageData.Media?.[0]?.url ?? '',
+      language: packageData.Language?.name || 'Español',
+
+      destinations: packageData.destinations || [],
+      activities:
+        packageData.activities?.map((a) => ({
+          name: a.Activity.name,
+          description: a.Activity.description,
+        })) || [],
+      includedItems: packageData.includedItems || [],
+      excludedItems: packageData.excludedItems || [],
+    };
+
+    console.log('🚀 Datos enviados al booking:', payload);
+
     // Construir query params con todos los datos del paquete
     const bookingParams = new URLSearchParams({
       packageId: packageId,
       packageName: packageData.name,
-      price: String(packageData.price ?? 0),
-      currency: packageData.currency || 'USD',
+      price: String(price),
+      currency: currency,
+      pricingName: pricingName,
       durationDays: String(packageData.durationDays ?? 1),
       description: packageData.description || '',
       image: packageData.Media?.[0]?.url ?? '',
+      language: packageData.Language?.name || 'Español',
 
       // Serializar arrays como JSON
       destinations: JSON.stringify(packageData.destinations || []),
@@ -85,6 +116,12 @@ export default function PackageDetailPage() {
     );
   }
 
+  // Obtener precio para mostrar en la UI
+  const priceOption = packageData.PricingOption?.[0];
+  const displayPrice = priceOption?.amount ? parseFloat(priceOption.amount) : 0;
+  const displayCurrency = priceOption?.currencyId === 2 ? 'PEN' : 'USD';
+  const currencySymbol = displayCurrency === 'PEN' ? 'S/' : '$';
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header variant="transparent" />
@@ -105,7 +142,8 @@ export default function PackageDetailPage() {
               {packageData.name}
             </h1>
             <p className="text-xl text-gray-100">
-              {packageData.durationDays} días
+              {packageData.durationDays} días •{' '}
+              {packageData.Language?.name || 'Español'}
             </p>
           </div>
         </div>
@@ -147,13 +185,12 @@ export default function PackageDetailPage() {
                 </div>
               )}
 
-            {/* Itinerario */}
+            {/* Actividades */}
             {packageData.activities && packageData.activities.length > 0 && (
               <div className="bg-white rounded-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   Actividades
                 </h2>
-
                 <ul className="list-disc list-inside text-gray-700 space-y-2">
                   {packageData.activities.map((act, index) => (
                     <li key={index}>
@@ -243,13 +280,17 @@ export default function PackageDetailPage() {
           <div>
             <div className="bg-white rounded-lg p-6 sticky top-4">
               <div className="mb-6">
-                <p className="text-gray-600 text-sm mb-2">Precio por persona</p>
+                <p className="text-gray-600 text-sm mb-2">
+                  {priceOption?.name || 'Precio por persona'}
+                </p>
                 <p className="text-4xl font-bold text-red-500">
-                  ${(packageData.price ?? 0).toLocaleString()}
+                  {currencySymbol}
+                  {displayPrice.toLocaleString('es-PE', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </p>
-                <p className="text-gray-600 text-sm">
-                  {packageData.currency || 'USD'}
-                </p>
+                <p className="text-gray-600 text-sm">{displayCurrency}</p>
               </div>
 
               <div className="space-y-4 mb-6">
@@ -271,9 +312,18 @@ export default function PackageDetailPage() {
                     </p>
                   </div>
                 </div>
+                <div className="flex items-center gap-3 text-gray-700">
+                  <span className="text-2xl">🗣️</span>
+                  <div>
+                    <p className="text-sm text-gray-600">Idioma</p>
+                    <p className="font-bold">
+                      {packageData.Language?.name || 'Español'}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              {/* BOTÓN DE RESERVA ACTUALIZADO */}
+              {/* BOTÓN DE RESERVA */}
               <button
                 onClick={handleReserveNow}
                 className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors mb-3"

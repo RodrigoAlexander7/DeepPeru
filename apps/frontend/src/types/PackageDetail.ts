@@ -39,15 +39,41 @@ export interface Review {
   createdAt?: string;
 }
 
+export interface PricingOption {
+  id: number;
+  packageId: number;
+  name: string;
+  description: string | null;
+  amount: string; // Viene como string desde el API
+  currencyId: number; // 1 = USD, 2 = PEN, etc.
+  perPerson: boolean;
+  minParticipants: number | null;
+  maxParticipants: number | null;
+  validFrom: string | null;
+  validTo: string | null;
+  isActive: boolean;
+}
+
+export interface Language {
+  id: number;
+  code: string;
+  name: string;
+}
+
 export interface PackageDetail {
   id: number;
   name: string;
+  // Pricing ahora viene desde PricingOption
+  PricingOption?: PricingOption[];
 
+  // Otros campos opcionales
+  currency?: string; // Deprecado, usar PricingOption
+  price?: number;
+
+  Language?: Language;
   // Descripción y meta
   description?: string;
-  currency?: string; // USD, PEN...
   durationDays?: number; // en días
-  price: number; // precio base
   rating?: number;
   difficulty?: string; // EASY, MEDIUM, HARD
 
@@ -64,7 +90,6 @@ export interface PackageDetail {
   activities?: any[];
   accessibilityOptions?: string[];
   PickupDetail?: any[];
-  PricingOption?: any[];
   TourismCompany?: any;
 
   // Ubicación / meeting point

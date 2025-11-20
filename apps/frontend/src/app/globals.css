@@ -5,6 +5,7 @@
   --foreground: #171717;
   --primary: #d52c25;
   --primary-hover: #8a1d1d;
+  --primary-soft: #f7c6c3;
 }
 
 @theme inline {

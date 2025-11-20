@@ -98,7 +98,7 @@ export default function BookingSummary({ packageData }: BookingSummaryProps) {
 
       {/* Política de cancelación */}
       {cancellationPolicy && (
-        <div className="mt-4 p-3 bg-[var(--primary)] rounded-lg flex items-start gap-2">
+        <div className="mt-4 p-3  rounded-lg flex items-start gap-2">
           <svg
             className="w-5 h-5 text-[var(--primary)] flex-shrink-0 mt-0.5"
             fill="currentColor"
