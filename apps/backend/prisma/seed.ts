@@ -510,13 +510,20 @@ async function createData() {
 
   const touristUser = await prisma.user.upsert({
     where: { email: 'tourist@example.com' },
-    update: {},
+    update: {
+      languageId: es.id,
+      currencyId: usd.id,
+      emergencyPhoneId: emergencyPhone.id,
+    },
     create: {
       email: 'tourist@example.com',
       name: 'Tourist User',
       isActive: true,
       nationalityId: usa.id,
       passportCountryId: usa.id,
+      languageId: es.id,
+      currencyId: usd.id,
+      emergencyPhoneId: emergencyPhone.id,
     },
   });
 
@@ -801,21 +808,8 @@ async function createData() {
     },
   });
 
-  // Tourist
-  const tourist = await prisma.tourist.upsert({
-    where: { userId: touristUser.id },
-    update: {
-      languageId: es.id,
-      currencyId: usd.id,
-      emergencyPhoneId: emergencyPhone.id,
-    },
-    create: {
-      userId: touristUser.id,
-      languageId: es.id,
-      currencyId: usd.id,
-      emergencyPhoneId: emergencyPhone.id,
-    },
-  });
+  // Tourist (removed, merged into User)
+  // const tourist = await prisma.tourist.upsert({ ... });
 
   // Helper: set representative city via raw SQL
   async function setRepresentativeCity(packageId: number, cityId: number) {
@@ -2584,7 +2578,7 @@ async function deleteData() {
   await prisma.tourismCompany.deleteMany();
 
   await prisma.permission.deleteMany();
-  await prisma.tourist.deleteMany();
+  // await prisma.tourist.deleteMany();
   await prisma.systemAdmin.deleteMany();
   await prisma.companyAdmin.deleteMany();
 
