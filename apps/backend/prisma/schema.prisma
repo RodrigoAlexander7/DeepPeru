@@ -291,9 +291,9 @@ model City {
   // Bridge relation to packages (normalized itinerary locations)
   packageLocations         PackageLocation[]
   // Back relation: packages that use this city as representative
-  representativeOfPackages TouristPackage[] @relation("RepresentativeCity")
+  representativeOfPackages TouristPackage[]  @relation("RepresentativeCity")
   // Back relation: activities whose destination is this city
-  activitiesDestination  Activity[]
+  activitiesDestination    Activity[]
 }
 
 /// City name translations
@@ -335,6 +335,7 @@ model Currency {
   countries     Country[]
   PricingOption PricingOption[]
   Tourist       Tourist[]
+  Booking       Booking[]
 }
 
 /// Highlights a positive aspect included in a tourist package (e.g., "Fast-track entry").
@@ -385,24 +386,24 @@ model CompanyWorker {
 
 /// A concrete feature of the package (amenity or attribute), grouped optionally by category.
 model Feature {
-  id             Int            @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   /// FK to Activity.id
-  activityId     Int
+  activityId  Int
   /// Optional grouping category (e.g., "Comfort", "Safety")
   /// Example: "Safety"
-  category       String?
+  category    String?
   /// Icon URL for UI representation
-  iconUrl        String?
+  iconUrl     String?
   /// Feature name (concise)
   /// Example: "Life Jackets Included"
-  name           String
+  name        String
   /// Optional detail description
   /// Example: "Certified jackets for all participants."
-  description    String?
+  description String?
   /// Display order
-  order          Int?
-  createdAt      DateTime       @default(now())
-  Activity       Activity       @relation(fields: [activityId], references: [id])
+  order       Int?
+  createdAt   DateTime @default(now())
+  Activity    Activity @relation(fields: [activityId], references: [id])
 
   @@index([activityId])
 }
@@ -411,7 +412,7 @@ model Feature {
 /// Core unit of an experience visited inside or across packages
 /// Represents a concrete attraction or activity with its own schedule
 model Activity {
-  id                 Int             @id @default(autoincrement())
+  id                 Int                      @id @default(autoincrement())
   /// Activity name
   name               String
   /// Optional description
@@ -419,10 +420,10 @@ model Activity {
   /// Destination City FK
   destinationCityId  Int
   /// Timestamps
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
   /// Relations
-  destinationCity    City            @relation(fields: [destinationCityId], references: [id])
+  destinationCity    City                     @relation(fields: [destinationCityId], references: [id])
   Feature            Feature[]
   Schedule           Schedule[]
   TouristPackageLink TouristPackageActivity[]
@@ -521,30 +522,31 @@ model PricingOption {
   isActive        Boolean        @default(true)
   Currency        Currency       @relation(fields: [currencyId], references: [id])
   TouristPackage  TouristPackage @relation(fields: [packageId], references: [id])
+  Booking         Booking[]
 
   @@index([currencyId])
   @@index([packageId])
 }
 
 model Schedule {
-  id             Int            @id @default(autoincrement())
+  id         Int         @id @default(autoincrement())
   /// FK to Activity.id
-  activityId     Int
+  activityId Int
   /// IANA timezone identifier (e.g., "America/Lima")
   /// Example: "America/Lima"
-  timezone       String
+  timezone   String
   /// Days of week the schedule applies
-  daysOfWeek     DayOfWeek[]
+  daysOfWeek DayOfWeek[]
   /// Local start time (HH:mm or flexible)
   /// Example: "09:00"
-  startTime      String
+  startTime  String
   /// Local end time
   /// Example: "17:30"
-  endTime        String?
+  endTime    String?
   /// Optional notes (exceptions, seasonal info)
   /// Example: "Not available on national holidays."
-  notes          String?
-  Activity       Activity       @relation(fields: [activityId], references: [id])
+  notes      String?
+  Activity   Activity    @relation(fields: [activityId], references: [id])
 
   @@index([activityId])
 }
@@ -565,6 +567,7 @@ model Tourist {
   Phone            Phone?    @relation(fields: [emergencyPhoneId], references: [id])
   Language         Language? @relation(fields: [languageId], references: [id])
   User             User      @relation(fields: [userId], references: [id])
+  Booking          Booking[]
 }
 
 /// Core product entity representing an experience/package offered.
@@ -658,6 +661,7 @@ model TouristPackage {
   locations                 PackageLocation[]
   // Association to activities via join table
   activities                TouristPackageActivity[]
+  Booking                   Booking[]
 
   @@index([companyId])
 }
@@ -728,15 +732,15 @@ model PackageLocation {
 /// Join table between TouristPackage and Activity (M:N)
 model TouristPackageActivity {
   /// FK to TouristPackage.id
-  packageId      Int
+  packageId  Int
   /// FK to Activity.id
-  activityId     Int
+  activityId Int
   /// Start date of the activity within the context of this package
-  startDate      DateTime
+  startDate  DateTime
   /// End date of the activity within the context of this package
-  endDate        DateTime
+  endDate    DateTime
   /// Creation timestamp
-  createdAt      DateTime       @default(now())
+  createdAt  DateTime @default(now())
 
   TouristPackage TouristPackage @relation(fields: [packageId], references: [id])
   Activity       Activity       @relation(fields: [activityId], references: [id])
@@ -745,8 +749,6 @@ model TouristPackageActivity {
   @@index([activityId])
   @@index([packageId])
 }
-
-
 
 enum Gender {
   /// Masculino
@@ -804,4 +806,56 @@ enum PackageType {
   GROUP
   PRIVATE
   SELF_GUIDED
+}
+
+model Booking {
+  id              String @id @default(cuid())
+  touristId       Int
+  packageId       Int
+  pricingOptionId Int
+
+  // Payment details (Mercado Pago)
+  paymentId     String?       @unique
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Financials
+  currencyId           Int
+  totalAmount          Decimal @db.Decimal(12, 2)
+  commissionPercentage Decimal @default(5.00) @db.Decimal(5, 2)
+  commissionAmount     Decimal @db.Decimal(12, 2)
+  companyAmount        Decimal @db.Decimal(12, 2)
+
+  // Booking details
+  bookingDate          DateTime      @default(now())
+  travelDate           DateTime
+  numberOfParticipants Int
+  status               BookingStatus @default(PENDING)
+
+  // Relations
+  Tourist        Tourist        @relation(fields: [touristId], references: [id])
+  TouristPackage TouristPackage @relation(fields: [packageId], references: [id])
+  PricingOption  PricingOption  @relation(fields: [pricingOptionId], references: [id])
+  Currency       Currency       @relation(fields: [currencyId], references: [id])
+
+  @@index([touristId])
+  @@index([packageId])
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  AUTHORIZED
+  IN_PROCESS
+  IN_MEDIATION
+  REJECTED
+  CANCELLED
+  REFUNDED
+  CHARGED_BACK
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
 }
