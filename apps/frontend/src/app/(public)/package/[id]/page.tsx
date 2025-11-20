@@ -39,16 +39,26 @@ export default function PackageDetailPage() {
   const handleReserveNow = () => {
     if (!packageData) return;
 
-    // Construir query params con los datos del paquete
+    // Construir query params con todos los datos del paquete
     const bookingParams = new URLSearchParams({
       packageId: packageId,
       packageName: packageData.name,
       price: String(packageData.price ?? 0),
       currency: packageData.currency || 'USD',
       durationDays: String(packageData.durationDays ?? 1),
-      // Puedes agregar más datos si los necesitas
-      destinations: JSON.stringify(packageData.destinations || []),
+      description: packageData.description || '',
       image: packageData.Media?.[0]?.url ?? '',
+
+      // Serializar arrays como JSON
+      destinations: JSON.stringify(packageData.destinations || []),
+      activities: JSON.stringify(
+        packageData.activities?.map((a) => ({
+          name: a.Activity.name,
+          description: a.Activity.description,
+        })) || [],
+      ),
+      includedItems: JSON.stringify(packageData.includedItems || []),
+      excludedItems: JSON.stringify(packageData.excludedItems || []),
     });
 
     // Navegar a la página de booking con los parámetros
