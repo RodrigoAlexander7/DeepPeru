@@ -5,7 +5,7 @@ import {
   IsEnum,
   IsBoolean,
   IsString,
-  IsDateString,
+  IsDate,
   Min,
   Max,
 } from 'class-validator';
@@ -49,21 +49,25 @@ export class SearchTouristPackageDto {
   // Date filters
   @ApiPropertyOptional({
     description:
-      'Start date filter (ISO 8601 format). Finds packages available on or after this date.',
-    example: '2025-06-01',
+      'Start date filter (ISO 8601). Finds packages available on or after this date.',
+    example: '2025-06-01T00:00:00.000Z',
+    type: String,
   })
   @IsOptional()
-  @IsDateString()
-  startDate?: string;
+  @Type(() => Date)
+  @IsDate()
+  startDate?: Date;
 
   @ApiPropertyOptional({
     description:
-      'End date filter (ISO 8601 format). Finds packages available on or before this date.',
-    example: '2025-06-15',
+      'End date filter (ISO 8601). Finds packages available on or before this date.',
+    example: '2025-06-15T23:59:59.000Z',
+    type: String,
   })
   @IsOptional()
-  @IsDateString()
-  endDate?: string;
+  @Type(() => Date)
+  @IsDate()
+  endDate?: Date;
 
   // Travelers/Capacity filters
   @ApiPropertyOptional({

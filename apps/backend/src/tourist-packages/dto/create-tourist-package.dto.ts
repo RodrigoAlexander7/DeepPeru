@@ -251,6 +251,80 @@ export class CreateScheduleDto {
 }
 
 /**
+ * DTOs for linking or creating Activities within a package context
+ */
+export class CreateOrLinkActivityDto {
+  @ApiPropertyOptional({
+    description:
+      'Existing Activity ID to link. If not provided, a new Activity will be created from name/destinationCityId.',
+    example: 12,
+  })
+  @IsOptional()
+  @IsNumber()
+  activityId?: number;
+
+  @ApiPropertyOptional({ description: 'Activity name (for new activity)' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({
+    description: 'Activity description (for new activity)',
+  })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: 'Destination city ID (required when creating a new activity)',
+    example: 1,
+  })
+  @IsOptional()
+  @IsNumber()
+  destinationCityId?: number;
+
+  @ApiProperty({
+    description:
+      'Start date of the activity inside this package context (ISO string).',
+    example: '2025-01-01T00:00:00.000Z',
+  })
+  @IsNotEmpty()
+  @IsString()
+  startDate: string;
+
+  @ApiProperty({
+    description:
+      'End date of the activity inside this package context (ISO string).',
+    example: '2025-12-31T23:59:59.000Z',
+  })
+  @IsNotEmpty()
+  @IsString()
+  endDate: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Schedules for the activity (only used when creating/updating a concrete Activity).',
+    type: [CreateScheduleDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateScheduleDto)
+  schedules?: CreateScheduleDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'Features for the activity (only used when creating/updating a concrete Activity).',
+    type: [CreateFeatureDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateFeatureDto)
+  features?: CreateFeatureDto[];
+}
+
+/**
  * DTO for creating a tourist package
  */
 export class CreateTouristPackageDto {
@@ -523,16 +597,6 @@ export class CreateTouristPackageDto {
   benefits?: CreateBenefitDto[];
 
   @ApiPropertyOptional({
-    description: 'Features of this package',
-    type: [CreateFeatureDto],
-  })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateFeatureDto)
-  features?: CreateFeatureDto[];
-
-  @ApiPropertyOptional({
     description: 'Pickup details',
     type: CreatePickupDetailDto,
   })
@@ -542,12 +606,13 @@ export class CreateTouristPackageDto {
   pickupDetail?: CreatePickupDetailDto;
 
   @ApiPropertyOptional({
-    description: 'Schedule information',
-    type: [CreateScheduleDto],
+    description:
+      'Activities included in this package. Each item can link an existing activity by ID or create a new one and will be associated with contextual start/end dates.',
+    type: [CreateOrLinkActivityDto],
   })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreateScheduleDto)
-  schedules?: CreateScheduleDto[];
+  @Type(() => CreateOrLinkActivityDto)
+  activities?: CreateOrLinkActivityDto[];
 }
