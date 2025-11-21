@@ -3,17 +3,23 @@
 
 import { TouristPackage } from '@/types';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
 interface ResultCardProps {
   package: TouristPackage;
 }
 
 export default function ResultCard({ package: pkg }: ResultCardProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
   console.log('paquetes recivbidos', pkg);
   // Obtener precio (primer pricing activo)
   const pricing =
     pkg.PricingOption?.find((p) => p.isActive) || pkg.PricingOption?.[0];
-  const price = pricing?.basePrice || 0;
-  const discountedPrice = pricing?.discountedPrice;
+  const price = pricing ? Number(pricing.amount) : 0;
+  const discountedPrice = null; // tu backend todavía no envía descuentos
 
   // Obtener imagen (media primaria)
   const primaryMedia = pkg.Media?.find((m) => m.isPrimary);
@@ -211,18 +217,22 @@ export default function ResultCard({ package: pkg }: ResultCardProps) {
         </div>
 
         {/* Action Button */}
-        <Link href={`/package/${pkg.id}`}>
-          <button
-            onClick={() => {
-              console.log('Ver detalles del paquete:', pkg.id);
-              // Aquí puedes navegar a la página de detalles
-              // router.push(`/package/${pkg.id}`);
-            }}
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 rounded-full transition-colors"
-          >
-            Ver detalles
-          </button>
-        </Link>
+        <button
+          onClick={() => {
+            setLoading(true);
+            router.push(`/package/${pkg.id}`);
+          }}
+          disabled={loading}
+          className={`w-full font-medium py-3 rounded-full transition-colors flex items-center justify-center
+            ${loading ? 'bg-gray-300 text-gray-600' : 'bg-red-500 hover:bg-red-600 text-white'}
+          `}
+        >
+          {loading ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            'Ver detalles'
+          )}
+        </button>
       </div>
     </div>
   );

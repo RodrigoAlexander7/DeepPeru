@@ -3,6 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary: #d52c25;
+  --primary-hover: #8a1d1d;
+  --primary-soft: #f7c6c3;
+  --primary-dark-button: #8a1d1d;
 }
 
 @theme inline {
@@ -11,13 +15,14 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
-
+/*
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
 }
+*/
 
 body {
   background: var(--background);
