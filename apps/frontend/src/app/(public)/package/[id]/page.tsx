@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Header, Footer } from '@/components/layout';
 import { packageService } from '@/features/packageDetail/packageService';
-import type { PackageDetail } from '@/types/PackageDetail';
+import type { PackageDetail, PricingOption } from '@/types/PackageDetail';
 import type { Activity } from '@/types/Activity';
 import Link from 'next/link';
 
@@ -18,20 +18,33 @@ export default function PackageDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
 
+  // Estado para manejar el número de personas por cada opción de precio
+  const [participantsByOption, setParticipantsByOption] = useState<
+    Record<number, number>
+  >({});
+
   useEffect(() => {
     const loadPackage = async () => {
       try {
         setLoading(true);
-
-        //const data = await packageService.getPackageDetail(packageId);
         const [packageData, activitiesData] = await Promise.all([
           packageService.getPackageDetail(packageId),
           packageService.getPackageActivities(packageId).catch(() => []),
         ]);
+
         setPackageData(packageData);
         setActivities(activitiesData);
 
-        setPackageData(packageData);
+        // Inicializar el número de personas para cada opción de precio
+        if (packageData.PricingOption) {
+          const initialParticipants: Record<number, number> = {};
+          packageData.PricingOption.forEach((option) => {
+            // Inicializar con el mínimo de participantes o 1
+            initialParticipants[option.id] = option.minParticipants || 1;
+          });
+          setParticipantsByOption(initialParticipants);
+        }
+
         console.log('Datos del paquete cargado:', packageData);
       } catch (err) {
         setError('Error cargando detalles del paquete');
@@ -46,49 +59,55 @@ export default function PackageDetailPage() {
     }
   }, [packageId]);
 
-  const handleReserveNow = () => {
+  const handleParticipantChange = (optionId: number, change: number) => {
+    setParticipantsByOption((prev) => {
+      const option = packageData?.PricingOption?.find(
+        (opt) => opt.id === optionId,
+      );
+      if (!option) return prev;
+
+      const currentCount = prev[optionId] || 1;
+      const newCount = currentCount + change;
+
+      // Validar mínimo y máximo
+      const min = option.minParticipants || 1;
+      const max = option.maxParticipants || 999;
+
+      if (newCount < min || newCount > max) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [optionId]: newCount,
+      };
+    });
+  };
+
+  const handleReserveWithOption = (pricingOption: PricingOption) => {
     if (!packageData) return;
 
-    // Obtener el precio desde PricingOption
-    const priceOption = packageData.PricingOption?.[0];
-    const price = priceOption?.amount ? parseFloat(priceOption.amount) : 0;
-    const currency = priceOption?.currencyId === 2 ? 'PEN' : 'USD';
-    const pricingName = priceOption?.name || 'Standard';
+    const participants = participantsByOption[pricingOption.id] || 1;
+    const pricePerUnit = parseFloat(pricingOption.amount);
+    const totalPrice = pricingOption.perPerson
+      ? pricePerUnit * participants
+      : pricePerUnit;
+    const currency = pricingOption.currencyId === 2 ? 'PEN' : 'USD';
 
-    const payload = {
-      packageId: packageId,
-      packageName: packageData.name,
-      price: price,
-      currency: currency,
-      pricingName: pricingName,
-      durationDays: packageData.durationDays ?? 1,
-      description: packageData.description || '',
-      image: packageData.Media?.[0]?.url ?? '',
-      language: packageData.Language?.name || 'Español',
-
-      destinations: packageData.destinations || [],
-      activities:
-        packageData.activities?.map((a) => ({
-          name: a.Activity.name,
-          description: a.Activity.description,
-        })) || [],
-      includedItems: packageData.includedItems || [],
-      excludedItems: packageData.excludedItems || [],
-    };
-
-    // Construir query params con todos los datos del paquete
     const bookingParams = new URLSearchParams({
       packageId: packageId,
       packageName: packageData.name,
-      price: String(price),
+      pricingOptionId: String(pricingOption.id),
+      pricingName: pricingOption.name,
+      pricePerUnit: String(pricePerUnit),
+      participants: String(participants),
+      totalPrice: String(totalPrice),
       currency: currency,
-      pricingName: pricingName,
+      perPerson: String(pricingOption.perPerson),
       durationDays: String(packageData.durationDays ?? 1),
       description: packageData.description || '',
       image: packageData.Media?.[0]?.url ?? '',
       language: packageData.Language?.name || 'Español',
-
-      // Serializar arrays como JSON
       destinations: JSON.stringify(packageData.destinations || []),
       activities: JSON.stringify(
         packageData.activities?.map((a) => ({
@@ -100,8 +119,7 @@ export default function PackageDetailPage() {
       excludedItems: JSON.stringify(packageData.excludedItems || []),
     });
 
-    // Navegar a la página de booking con los parámetros
-    router.push(`/booking/${packageId}`);
+    router.push(`/booking/${packageId}?${bookingParams.toString()}`);
   };
 
   if (loading) {
@@ -124,11 +142,8 @@ export default function PackageDetailPage() {
     );
   }
 
-  // Obtener precio para mostrar en la UI
-  const priceOption = packageData.PricingOption?.[0];
-  const displayPrice = priceOption?.amount ? parseFloat(priceOption.amount) : 0;
-  const displayCurrency = priceOption?.currencyId === 2 ? 'PEN' : 'USD';
-  const currencySymbol = displayCurrency === 'PEN' ? 'S/' : '$';
+  const pricingOptions =
+    packageData.PricingOption?.filter((opt) => opt.isActive) || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -347,65 +362,193 @@ export default function PackageDetailPage() {
             )}
           </div>
 
-          {/* Columna derecha: Card de precio y reserva */}
-          <div>
-            <div className="bg-white rounded-lg p-6 sticky top-4">
-              <div className="mb-6">
-                <p className="text-gray-600 text-sm mb-2">
-                  {priceOption?.name || 'Precio por persona'}
+          {/* Columna derecha: Opciones de precio */}
+          <div className="space-y-3">
+            {pricingOptions.length > 0 ? (
+              pricingOptions.map((option) => {
+                const price = parseFloat(option.amount);
+                const currency = option.currencyId === 2 ? 'PEN' : 'USD';
+                const currencySymbol = currency === 'PEN' ? 'S/' : '$';
+                const participants =
+                  participantsByOption[option.id] ||
+                  option.minParticipants ||
+                  1;
+                const totalPrice = option.perPerson
+                  ? price * participants
+                  : price;
+
+                return (
+                  <div
+                    key={option.id}
+                    className="bg-white rounded-lg p-4 shadow-md"
+                  >
+                    {/* Nombre de la opción */}
+                    <div className="mb-3 pb-3 border-b">
+                      <h3 className="text-sm font-bold text-gray-900">
+                        {option.name}
+                      </h3>
+                      {option.description && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          {option.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Precio */}
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-600 mb-1">
+                        {option.perPerson
+                          ? 'Precio por persona'
+                          : 'Precio total'}
+                      </p>
+                      <p className="text-2xl font-bold text-red-500">
+                        {currencySymbol}
+                        {price.toLocaleString('es-PE', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                    </div>
+
+                    {/* Selector de participantes */}
+                    {option.perPerson && (
+                      <div className="mb-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-2">
+                          Número de personas
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              handleParticipantChange(option.id, -1)
+                            }
+                            disabled={
+                              participants <= (option.minParticipants || 1)
+                            }
+                            className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-lg font-bold hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            −
+                          </button>
+                          <span className="text-xl font-bold text-gray-900 min-w-[2.5rem] text-center">
+                            {participants}
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleParticipantChange(option.id, 1)
+                            }
+                            disabled={
+                              option.maxParticipants !== null &&
+                              participants >= option.maxParticipants
+                            }
+                            className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-lg font-bold hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* Límites de participantes */}
+                        {(option.minParticipants !== null ||
+                          option.maxParticipants !== null) && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {option.minParticipants !== null &&
+                              `Mínimo: ${option.minParticipants}`}
+                            {option.minParticipants !== null &&
+                              option.maxParticipants !== null &&
+                              ' • '}
+                            {option.maxParticipants !== null &&
+                              `Máximo: ${option.maxParticipants}`}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Precio total */}
+                    {option.perPerson && (
+                      <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-600">Total</p>
+                        <p className="text-lg font-bold text-gray-900">
+                          {currencySymbol}
+                          {totalPrice.toLocaleString('es-PE', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Validez de la oferta */}
+                    {(option.validFrom || option.validTo) && (
+                      <div className="mb-3 text-xs text-gray-600">
+                        <p className="font-medium">Válido:</p>
+                        {option.validFrom && (
+                          <p>
+                            Desde:{' '}
+                            {new Date(option.validFrom).toLocaleDateString(
+                              'es-PE',
+                            )}
+                          </p>
+                        )}
+                        {option.validTo && (
+                          <p>
+                            Hasta:{' '}
+                            {new Date(option.validTo).toLocaleDateString(
+                              'es-PE',
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Información del paquete */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <span className="text-base">📅</span>
+                        <div>
+                          <p className="text-xs text-gray-600">Duración</p>
+                          <p className="text-xs font-bold">
+                            {packageData.durationDays ?? 0} días
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <span className="text-base">📍</span>
+                        <div>
+                          <p className="text-xs text-gray-600">Destinos</p>
+                          <p className="text-xs font-bold">
+                            {packageData.destinations?.length ?? 0} lugares
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <span className="text-base">🗣️</span>
+                        <div>
+                          <p className="text-xs text-gray-600">Idioma</p>
+                          <p className="text-xs font-bold">
+                            {packageData.Language?.name || 'Español'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botones de acción */}
+                    <button
+                      onClick={() => handleReserveWithOption(option)}
+                      className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 text-sm rounded-lg transition-colors mb-2"
+                    >
+                      Reservar Ahora
+                    </button>
+                    <button className="w-full border-2 border-red-500 text-red-500 hover:bg-red-50 font-bold py-2 text-sm rounded-lg transition-colors">
+                      Contactar Empresa
+                    </button>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="bg-white rounded-lg p-6 text-center">
+                <p className="text-gray-600">
+                  No hay opciones de precio disponibles
                 </p>
-                <p className="text-4xl font-bold text-red-500">
-                  {currencySymbol}
-                  {displayPrice.toLocaleString('es-PE', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </p>
-                <p className="text-gray-600 text-sm">{displayCurrency}</p>
               </div>
-
-              <div className="space-y-4 mb-6">
-                <div className="flex items-center gap-3 text-gray-700">
-                  <span className="text-2xl">📅</span>
-                  <div>
-                    <p className="text-sm text-gray-600">Duración</p>
-                    <p className="font-bold">
-                      {packageData.durationDays ?? 0} días
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-gray-700">
-                  <span className="text-2xl">📍</span>
-                  <div>
-                    <p className="text-sm text-gray-600">Destinos</p>
-                    <p className="font-bold">
-                      {packageData.destinations?.length ?? 0} lugares
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-gray-700">
-                  <span className="text-2xl">🗣️</span>
-                  <div>
-                    <p className="text-sm text-gray-600">Idioma</p>
-                    <p className="font-bold">
-                      {packageData.Language?.name || 'Español'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* BOTÓN DE RESERVA */}
-              <button
-                onClick={handleReserveNow}
-                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-lg transition-colors mb-3"
-              >
-                Reservar Ahora
-              </button>
-
-              <button className="w-full border-2 border-red-500 text-red-500 hover:bg-red-50 font-bold py-3 rounded-lg transition-colors">
-                Contactar Empresa
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </section>
