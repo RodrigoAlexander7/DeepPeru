@@ -112,7 +112,7 @@ ${formData.promoCode ? `🎁 *Código promocional:* ${formData.promoCode}` : ''}
             </span>
           </label>
 
-          {/* Reservar ahora, pagar después */}
+          {/* Reservar ahora, pagar después 
           <label className="flex cursor-pointer items-center justify-between rounded-lg border-2 border-gray-300 p-4 hover:border-red-500">
             <div className="flex items-center">
               <input
@@ -136,6 +136,7 @@ ${formData.promoCode ? `🎁 *Código promocional:* ${formData.promoCode}` : ''}
             </div>
             <span className="text-sm text-gray-600">Pagar después</span>
           </label>
+          */}
         </div>
       </div>
 
@@ -204,16 +205,8 @@ ${formData.promoCode ? `🎁 *Código promocional:* ${formData.promoCode}` : ''}
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={handleWhatsAppPayment}
-            className="rounded-full bg-[var(--primary)] px-6 py-3 font-semibold text-white hover:bg-[var(--primary-hover)]"
-          >
-            Pagar por WhatsApp
-          </button>
-
-          <button
-            type="button"
             onClick={onSubmit}
-            className="rounded-full border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50"
+            className="rounded-full bg-[var(--primary)] px-6 py-3 font-semibold text-white hover:bg-[var(--primary-hover)]"
           >
             Finalizar reserva
           </button>
