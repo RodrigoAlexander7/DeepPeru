@@ -286,7 +286,7 @@ export default function BookingPage() {
     console.log('Enviando reserva al backend:', bookingData);
 
     try {
-      // Aquí harías el POST a tu backend
+      /* Aquí harías el POST a tu backend
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
@@ -305,7 +305,7 @@ export default function BookingPage() {
       } else {
         const error = await response.json();
         alert(`Error al crear la reserva: ${error.message}`);
-      }
+      }*/
     } catch (error) {
       console.error('Error al enviar la reserva:', error);
       alert(
