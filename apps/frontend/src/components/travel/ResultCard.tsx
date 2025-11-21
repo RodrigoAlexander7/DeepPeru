@@ -18,8 +18,8 @@ export default function ResultCard({ package: pkg }: ResultCardProps) {
   // Obtener precio (primer pricing activo)
   const pricing =
     pkg.PricingOption?.find((p) => p.isActive) || pkg.PricingOption?.[0];
-  const price = pricing?.basePrice || 0;
-  const discountedPrice = pricing?.discountedPrice;
+  const price = pricing ? Number(pricing.amount) : 0;
+  const discountedPrice = null; // tu backend todavía no envía descuentos
 
   // Obtener imagen (media primaria)
   const primaryMedia = pkg.Media?.find((m) => m.isPrimary);

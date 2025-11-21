@@ -116,12 +116,12 @@ export interface TouristPackage {
     id: number;
     packageId: number;
     name: string;
-    description: string;
-    basePrice: number;
-    discountedPrice: number | null;
+    amount: string; // viene como string
+    perPerson: boolean;
     currencyId: number;
     isActive: boolean;
   }>;
+
   Media: Array<{
     id: number;
     packageId: number;
