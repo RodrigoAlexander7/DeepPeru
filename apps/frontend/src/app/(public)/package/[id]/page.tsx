@@ -1,24 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { Header } from '@/components/layout';
-import { Footer } from '@/components/layout';
-import BookingModal from '@/components/layout/BookingModal';
+import { useParams, useRouter } from 'next/navigation';
+import { Header, Footer } from '@/components/layout';
 import { packageService } from '@/features/packageDetail/packageService';
-import type { PackageDetail } from '@/types/PackageDetail';
+import type { PackageDetail, PricingOption } from '@/types/PackageDetail';
 import type { Activity } from '@/types/Activity';
+import Link from 'next/link';
+import { Calendar, MapPin, Languages } from 'lucide-react';
 
 export default function PackageDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const packageId = params.id as string;
 
   const [packageData, setPackageData] = useState<PackageDetail | null>(null);
-  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [activities, setActivities] = useState<Activity[]>([]);
+
+  // Estado para manejar el número de personas por cada opción de precio
+  const [participantsByOption, setParticipantsByOption] = useState<
+    Record<number, number>
+  >({});
 
   useEffect(() => {
     const loadPackage = async () => {
@@ -28,8 +32,21 @@ export default function PackageDetailPage() {
           packageService.getPackageDetail(packageId),
           packageService.getPackageActivities(packageId).catch(() => []),
         ]);
+
         setPackageData(packageData);
         setActivities(activitiesData);
+
+        // Inicializar el número de personas para cada opción de precio
+        if (packageData.PricingOption) {
+          const initialParticipants: Record<number, number> = {};
+          packageData.PricingOption.forEach((option) => {
+            // Inicializar con el mínimo de participantes o 1
+            initialParticipants[option.id] = option.minParticipants || 1;
+          });
+          setParticipantsByOption(initialParticipants);
+        }
+
+        console.log('Datos del paquete cargado:', packageData);
       } catch (err) {
         setError('Error cargando detalles del paquete');
         console.error(err);
@@ -42,6 +59,69 @@ export default function PackageDetailPage() {
       loadPackage();
     }
   }, [packageId]);
+
+  const handleParticipantChange = (optionId: number, change: number) => {
+    setParticipantsByOption((prev) => {
+      const option = packageData?.PricingOption?.find(
+        (opt) => opt.id === optionId,
+      );
+      if (!option) return prev;
+
+      const currentCount = prev[optionId] || 1;
+      const newCount = currentCount + change;
+
+      // Validar mínimo y máximo
+      const min = option.minParticipants || 1;
+      const max = option.maxParticipants || 999;
+
+      if (newCount < min || newCount > max) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [optionId]: newCount,
+      };
+    });
+  };
+
+  const handleReserveWithOption = (pricingOption: PricingOption) => {
+    if (!packageData) return;
+
+    const participants = participantsByOption[pricingOption.id] || 1;
+    const pricePerUnit = parseFloat(pricingOption.amount);
+    const totalPrice = pricingOption.perPerson
+      ? pricePerUnit * participants
+      : pricePerUnit;
+    const currency = pricingOption.currencyId === 2 ? 'PEN' : 'USD';
+
+    const bookingParams = new URLSearchParams({
+      packageId: packageId,
+      packageName: packageData.name,
+      pricingOptionId: String(pricingOption.id),
+      pricingName: pricingOption.name,
+      pricePerUnit: String(pricePerUnit),
+      participants: String(participants),
+      totalPrice: String(totalPrice),
+      currency: currency,
+      perPerson: String(pricingOption.perPerson),
+      durationDays: String(packageData.durationDays ?? 1),
+      description: packageData.description || '',
+      image: packageData.Media?.[0]?.url ?? '',
+      language: packageData.Language?.name || 'Español',
+      destinations: JSON.stringify(packageData.destinations || []),
+      activities: JSON.stringify(
+        packageData.activities?.map((a) => ({
+          name: a.Activity.name,
+          description: a.Activity.description,
+        })) || [],
+      ),
+      includedItems: JSON.stringify(packageData.includedItems || []),
+      excludedItems: JSON.stringify(packageData.excludedItems || []),
+    });
+
+    router.push(`/booking/${packageId}?${bookingParams.toString()}`);
+  };
 
   if (loading) {
     return (
@@ -63,6 +143,9 @@ export default function PackageDetailPage() {
     );
   }
 
+  const pricingOptions =
+    packageData.PricingOption?.filter((opt) => opt.isActive) || [];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header variant="transparent" />
@@ -71,16 +154,20 @@ export default function PackageDetailPage() {
       <section
         className="relative h-96 bg-cover bg-center"
         style={{
-          backgroundImage:
-            'url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200)',
+          backgroundImage: packageData.Media?.[0]?.url
+            ? `url(${packageData.Media[0].url})`
+            : 'url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200)',
         }}
       >
         <div className="absolute inset-0 bg-black/40"></div>
         <div className="relative z-10 h-full flex flex-col justify-end p-8">
           <div className="container mx-auto">
-            <h1 className="text-5xl font-bold  mb-2">{packageData.name}</h1>
+            <h1 className="text-5xl font-bold text-white mb-2">
+              {packageData.name}
+            </h1>
             <p className="text-xl text-gray-100">
-              {packageData.durationDays} días
+              {packageData.durationDays} días •{' '}
+              {packageData.Language?.name || 'Español'}
             </p>
           </div>
         </div>
@@ -122,34 +209,7 @@ export default function PackageDetailPage() {
                 </div>
               )}
 
-            {/* Itinerario */}
-            {packageData.itinerary && packageData.itinerary.length > 0 && (
-              <div className="bg-white rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Itinerario
-                </h2>
-                <div className="space-y-4">
-                  {packageData.itinerary.map((item) => (
-                    <div
-                      key={item.day}
-                      className="border-l-4 border-red-500 pl-4"
-                    >
-                      <h3 className="font-bold text-gray-900">
-                        Día {item.day}
-                        {item.title && ` - ${item.title}`}
-                      </h3>
-                      <ul className="list-disc list-inside text-gray-600 mt-2 space-y-1">
-                        {item.activities.map((activity, j) => (
-                          <li key={j}>{activity}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Actividades incluidas */}
+            {/* Actividades */}
             {activities && activities.length > 0 && (
               <div className="bg-white rounded-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
@@ -236,43 +296,45 @@ export default function PackageDetailPage() {
 
             {/* Incluye / Excluye */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {packageData.inclusions && packageData.inclusions.length > 0 && (
-                <div className="bg-white rounded-lg p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    Incluye
-                  </h3>
-                  <ul className="space-y-2">
-                    {packageData.inclusions.map((inc, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-2 text-gray-600"
-                      >
-                        <span className="text-green-500 font-bold">✓</span>
-                        {inc}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {packageData.includedItems &&
+                packageData.includedItems.length > 0 && (
+                  <div className="bg-white rounded-lg p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                      Incluye
+                    </h3>
+                    <ul className="space-y-2">
+                      {packageData.includedItems.map((inc, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 text-gray-600"
+                        >
+                          <span className="text-green-500 font-bold">✓</span>
+                          {inc}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-              {packageData.exclusions && packageData.exclusions.length > 0 && (
-                <div className="bg-white rounded-lg p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">
-                    No Incluye
-                  </h3>
-                  <ul className="space-y-2">
-                    {packageData.exclusions.map((exc, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-2 text-gray-600"
-                      >
-                        <span className="text-red-500 font-bold">✗</span>
-                        {exc}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {packageData.excludedItems &&
+                packageData.excludedItems.length > 0 && (
+                  <div className="bg-white rounded-lg p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                      No Incluye
+                    </h3>
+                    <ul className="space-y-2">
+                      {packageData.excludedItems.map((exc, i) => (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 text-gray-600"
+                        >
+                          <span className="text-red-500 font-bold">✗</span>
+                          {exc}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
             </div>
 
             {/* Reviews */}
@@ -289,7 +351,7 @@ export default function PackageDetailPage() {
                           {review.userName || 'Usuario'}
                         </p>
                         <div className="flex text-yellow-400">
-                          {'★'.repeat(review.rating)}{' '}
+                          {'★'.repeat(review.rating)}
                           {'☆'.repeat(5 - review.rating)}
                         </div>
                       </div>
@@ -301,66 +363,202 @@ export default function PackageDetailPage() {
             )}
           </div>
 
-          {/* Columna derecha: Card de precio y reserva */}
-          <div>
-            <div className="bg-white rounded-lg p-6 sticky top-4">
-              <div className="mb-6">
-                <p className="text-gray-600 text-sm mb-2">Precio por persona</p>
-                <p className="text-4xl font-bold text-red-500">
-                  ${(packageData.price ?? 0).toLocaleString()}
-                </p>
-                <p className="text-gray-600 text-sm">
-                  {packageData.currency || 'USD'}
+          {/* Columna derecha: Opciones de precio */}
+          <div className="space-y-3">
+            {pricingOptions.length > 0 ? (
+              pricingOptions.map((option) => {
+                const price = parseFloat(option.amount);
+                const currency = option.currencyId === 2 ? 'PEN' : 'USD';
+                const currencySymbol = currency === 'PEN' ? 'S/' : '$';
+                const participants =
+                  participantsByOption[option.id] ||
+                  option.minParticipants ||
+                  1;
+                const totalPrice = option.perPerson
+                  ? price * participants
+                  : price;
+
+                return (
+                  <div
+                    key={option.id}
+                    className="bg-white rounded-lg p-4 shadow-md"
+                  >
+                    {/* Nombre de la opción */}
+                    <div className="mb-3 pb-3 border-b">
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {option.name}
+                      </h3>
+                    </div>
+
+                    {/* Precio */}
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-600 mb-1">
+                        {option.perPerson
+                          ? 'Precio por persona'
+                          : 'Precio total'}
+                      </p>
+                      <p className="text-2xl font-bold text-red-500">
+                        {currencySymbol}
+                        {price.toLocaleString('es-PE', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                    </div>
+
+                    {/* Selector de participantes */}
+                    {option.perPerson && (
+                      <div className="mb-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-2">
+                          Número de personas
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              handleParticipantChange(option.id, -1)
+                            }
+                            disabled={
+                              participants <= (option.minParticipants || 1)
+                            }
+                            className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-lg font-bold hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            −
+                          </button>
+                          <span className="text-xl font-bold text-gray-900 min-w-[2.5rem] text-center">
+                            {participants}
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleParticipantChange(option.id, 1)
+                            }
+                            disabled={
+                              option.maxParticipants !== null &&
+                              participants >= option.maxParticipants
+                            }
+                            className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center text-lg font-bold hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* Límites de participantes */}
+                        {(option.minParticipants !== null ||
+                          option.maxParticipants !== null) && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {option.minParticipants !== null &&
+                              `Mínimo: ${option.minParticipants}`}
+                            {option.minParticipants !== null &&
+                              option.maxParticipants !== null &&
+                              ' • '}
+                            {option.maxParticipants !== null &&
+                              `Máximo: ${option.maxParticipants}`}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Precio total */}
+                    {option.perPerson && (
+                      <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-600">Total</p>
+                        <p className="text-lg font-bold text-gray-900">
+                          {currencySymbol}
+                          {totalPrice.toLocaleString('es-PE', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Validez de la oferta */}
+                    {(option.validFrom || option.validTo) && (
+                      <div className="mb-3 text-xs text-gray-600">
+                        <p className="font-medium">Válido:</p>
+                        {option.validFrom && (
+                          <p>
+                            Desde:{' '}
+                            {new Date(option.validFrom).toLocaleDateString(
+                              'es-PE',
+                            )}
+                          </p>
+                        )}
+                        {option.validTo && (
+                          <p>
+                            Hasta:{' '}
+                            {new Date(option.validTo).toLocaleDateString(
+                              'es-PE',
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Información del paquete */}
+                    <div className="flex items-center justify-between bg-white  rounded-lg p-4 mt-4">
+                      {/* Duración */}
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-gray-700" />
+                        <div>
+                          <p className="text-[10px] text-gray-600 leading-tight">
+                            Duración
+                          </p>
+                          <p className="text-xs font-bold leading-tight">
+                            {packageData.durationDays ?? 0} días
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Destinos */}
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-gray-700" />
+                        <div>
+                          <p className="text-[10px] text-gray-600 leading-tight">
+                            Destinos
+                          </p>
+                          <p className="text-xs font-bold leading-tight">
+                            {packageData.destinations?.length ?? 0} lugares
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Idioma */}
+                      <div className="flex items-center gap-2">
+                        <Languages className="w-5 h-5 text-gray-700" />
+                        <div>
+                          <p className="text-[10px] text-gray-600 leading-tight">
+                            Idioma
+                          </p>
+                          <p className="text-xs font-bold leading-tight">
+                            {packageData.Language?.name || 'Español'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botones de acción */}
+                    <button
+                      onClick={() => handleReserveWithOption(option)}
+                      className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 text-sm rounded-lg transition-colors mb-2"
+                    >
+                      Reservar Ahora
+                    </button>
+                    <button className="w-full border-2 border-red-500 text-red-500 hover:bg-red-50 font-bold py-2 text-sm rounded-lg transition-colors">
+                      Contactar Empresa
+                    </button>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="bg-white rounded-lg p-6 text-center">
+                <p className="text-gray-600">
+                  No hay opciones de precio disponibles
                 </p>
               </div>
-
-              <div className="space-y-4 mb-6">
-                <div className="flex items-center gap-3 text-gray-700">
-                  <span className="text-2xl">📅</span>
-                  <div>
-                    <p className="text-sm text-gray-600">Duración</p>
-                    <p className="font-bold">
-                      {packageData.durationDays ?? 0} días
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-gray-700">
-                  <span className="text-2xl">📍</span>
-                  <div>
-                    <p className="text-sm text-gray-600">Destinos</p>
-                    <p className="font-bold">
-                      {packageData.destinations?.length ?? 0} lugares
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setIsBookingModalOpen(true)}
-                className="w-full bg-red-500 hover:bg-red-600 font-bold py-3 rounded-lg transition-colors mb-3"
-              >
-                Reservar Ahora
-              </button>
-
-              <button className="w-full border-2 border-red-500 text-red-500 hover:bg-red-50 font-bold py-3 rounded-lg transition-colors">
-                Contactar Empresa
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </section>
-
-      {/* Modal de reserva */}
-      <BookingModal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        packageId={packageId}
-        packageName={packageData.name}
-        packagePrice={packageData.price ?? 0}
-        durationDays={packageData.durationDays}
-        itinerary={packageData.itinerary}
-        inclusions={packageData.inclusions}
-      />
 
       <Footer />
     </div>

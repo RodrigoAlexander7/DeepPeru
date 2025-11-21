@@ -227,7 +227,7 @@ export default function SearchBar() {
         {showDatePicker && (
           <div className="absolute top-full left-0 mt-6 bg-white rounded-2xl shadow-2xl z-500 overflow-hidden">
             {/* Tabs */}
-            <div className="flex border-b">
+            <div className="flex border-b border-gray-200">
               <button
                 onClick={() => setActiveTab('exact')}
                 className={`flex-1 px-6 py-3 font-medium transition-colors ${
@@ -309,7 +309,7 @@ export default function SearchBar() {
             </div>
 
             {/* Buttons */}
-            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t">
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={handleClearDates}
                 className="px-4 py-2 text-gray-700 hover:text-red-500 font-medium transition-colors"
@@ -392,7 +392,7 @@ export default function SearchBar() {
       <button
         type="button"
         onClick={handleSearch}
-        className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-full font-medium transition-colors flex items-center gap-2 whitespace-nowrap"
+        className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white px-8 py-3 rounded-full font-medium transition-colors flex items-center gap-2 whitespace-nowrap"
       >
         <svg
           className="w-5 h-5"

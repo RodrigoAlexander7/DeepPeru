@@ -6,6 +6,7 @@ import {
   UseGuards,
   Query,
   BadRequestException,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { AuthService } from '@/auth/auth.service';
 import type { Response } from 'express';
@@ -105,8 +106,7 @@ export class AuthController {
   })
   async mercadoPagoCallback(
     @Request() req: MercadoPagoAuthRequest,
-    @Query('companyId') companyId: string,
-    @CurrentUser('sub') userId: string,
+    @Query('companyId', ParseIntPipe) companyId: number,
     @Res() res: Response,
   ) {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
@@ -118,8 +118,7 @@ export class AuthController {
 
       const result = await this.authService.callbackOauthMercadoPago(
         req.user,
-        userId,
-        parseInt(companyId, 10),
+        companyId,
       );
 
       res.redirect(
