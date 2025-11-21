@@ -5,14 +5,23 @@ import ContactForm from '@/components/booking/ContactForm';
 import ActivityDetails from '@/components/booking/ActivityDetails';
 import PaymentDetails from '@/components/booking/PaymentDetails';
 import { BookingFormData } from '@/types/booking';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import StepSection from '@/components/booking/StepSection';
 import BookingSummary from '@/components/booking/BookingSummary';
 import { travelService } from '@/features/travel/travelService';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  picture?: string;
+  phone?: string;
+}
+
 export default function BookingPage() {
   const params = useParams();
   const search = useSearchParams();
+  const router = useRouter();
 
   const packageId = params.id;
 
@@ -28,11 +37,42 @@ export default function BookingPage() {
   const userEmail = search.get('email') || undefined;
   const userName = search.get('name') || undefined;
 
+  // Estado del usuario actual
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
   // Trackea el paso actual
   const [step, setStep] = useState(1);
 
   const [packageData, setPackageData] = useState<any>(null);
   const [selectedPricing, setSelectedPricing] = useState<any>(null);
+
+  // Cargar usuario actual
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const response = await fetch('/api/user/me');
+        if (response.ok) {
+          const userData = await response.json();
+          setCurrentUser(userData);
+        } else {
+          // Usuario no autenticado - redirigir a login
+          router.push(
+            `/login?redirect=/booking/${packageId}?${search.toString()}`,
+          );
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+        router.push(
+          `/login?redirect=/booking/${packageId}?${search.toString()}`,
+        );
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    loadUser();
+  }, [packageId, search, router]);
 
   useEffect(() => {
     if (!packageId) return;
@@ -124,9 +164,9 @@ export default function BookingPage() {
 
   const [formData, setFormData] = useState<BookingFormData>({
     // Paso 1
-    firstName: userName || '',
+    firstName: '',
     lastName: '',
-    email: userEmail || '',
+    email: '',
     countryCode: '+51',
     phone: '',
     receiveTextUpdates: false,
@@ -145,20 +185,42 @@ export default function BookingPage() {
     promoCode: '',
   });
 
+  // Llenar datos del formulario con info del usuario autenticado
+  useEffect(() => {
+    if (currentUser && !loadingUser) {
+      const nameParts = currentUser.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      setFormData((prev) => ({
+        ...prev,
+        firstName: userName || firstName,
+        lastName: lastName,
+        email: userEmail || currentUser.email,
+        phone: currentUser.phone || prev.phone,
+      }));
+    }
+  }, [currentUser, loadingUser, userName, userEmail]);
+
   // Inicializar travelers basado en los participantes de la opción de precio
   useEffect(() => {
-    if (selectedPricing && formData.travelers.length === 0) {
+    if (selectedPricing && formData.travelers.length === 0 && currentUser) {
+      const nameParts = currentUser.name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
       const initialTravelers = Array.from(
         { length: selectedPricing.participants },
         (_, i) => ({
           id: String(i + 1),
-          firstName: '',
-          lastName: '',
+          // El primer viajero (índice 0) se llena con datos del usuario
+          firstName: i === 0 ? userName || firstName : '',
+          lastName: i === 0 ? lastName : '',
         }),
       );
       setFormData((prev) => ({ ...prev, travelers: initialTravelers }));
     }
-  }, [selectedPricing, formData.travelers.length]);
+  }, [selectedPricing, formData.travelers.length, currentUser, userName]);
 
   // Recalcular precio cuando cambie el número de viajeros
   const calculateTotalPrice = () => {
@@ -176,15 +238,93 @@ export default function BookingPage() {
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  const handleSubmit = () => {
-    console.log('Datos de reserva:', {
-      packageData,
-      selectedPricing,
-      formData,
-      totalPrice: currentTotalPrice,
-    });
-    alert('Reserva completada (Aquí enviarías la data al backend)');
+  const handleSubmit = async () => {
+    if (!currentUser || !packageData || !selectedPricing) {
+      alert('Falta información necesaria para completar la reserva');
+      return;
+    }
+
+    const bookingData = {
+      // IDs necesarios
+      userId: currentUser.id,
+      packageId: packageData.id,
+      pricingOptionId: selectedPricing.id,
+
+      // Datos del formulario
+      contactInfo: {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        countryCode: formData.countryCode,
+      },
+
+      // Detalles de la actividad
+      activityDetails: {
+        date: formData.date,
+        time: formData.time,
+        travelers: formData.travelers,
+        pickupLocation: formData.pickupLocation,
+        tourLanguage: formData.tourLanguage,
+      },
+
+      // Detalles de pago
+      paymentDetails: {
+        paymentOption: formData.paymentOption,
+        promoCode: formData.promoCode,
+        totalPrice: currentTotalPrice,
+        currency: selectedPricing.currency,
+      },
+
+      // Información adicional
+      preferences: {
+        receiveTextUpdates: formData.receiveTextUpdates,
+        receiveEmailOffers: formData.receiveEmailOffers,
+      },
+    };
+
+    console.log('Enviando reserva al backend:', bookingData);
+
+    try {
+      // Aquí harías el POST a tu backend
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert('¡Reserva completada exitosamente!');
+        console.log('Resultado de la reserva:', result);
+
+        // Redirigir a página de confirmación
+        router.push(`/booking/confirmation/${result.bookingId}`);
+      } else {
+        const error = await response.json();
+        alert(`Error al crear la reserva: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error al enviar la reserva:', error);
+      alert(
+        'Hubo un error al procesar tu reserva. Por favor intenta de nuevo.',
+      );
+    }
   };
+
+  // Mostrar loading mientras carga el usuario
+  if (loadingUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando sesión...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!packageData || !selectedPricing) {
     return (
@@ -197,6 +337,23 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
+        {/* Mensaje de bienvenida del usuario */}
+        {currentUser && (
+          <div className="max-w-7xl mx-auto mb-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                {currentUser.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Reservando como:</p>
+                <p className="font-semibold text-gray-900">
+                  {currentUser.name}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Layout de dos columnas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {/* Columna izquierda (Formulario) */}
@@ -244,8 +401,8 @@ export default function BookingPage() {
                 formData={formData}
                 onUpdate={updateForm}
                 onNext={() => setStep(2)}
-                userEmail={userEmail}
-                userName={userName}
+                userEmail={formData.email}
+                userName={formData.firstName}
               />
             </StepSection>
 

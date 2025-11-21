@@ -112,7 +112,6 @@ export default function ContactForm({
             </select>
             <input
               type="tel"
-              required
               value={formData.phone}
               onChange={(e) => onUpdate({ phone: e.target.value })}
               className="w-full rounded-r border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
