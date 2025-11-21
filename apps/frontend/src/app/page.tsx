@@ -19,14 +19,33 @@ export default function Home() {
 
   const loadPopularPackages = async () => {
     try {
-      //      const data = await travelService.getPopularPackages();
-      //      setPackages(data);
+      const paquetes = await travelService.getAllPackages({
+        page: 1,
+        limit: 8,
+      });
+      setPackages(
+        paquetes.data.map((p: any) => ({
+          id: p.id,
+          title: p.name,
+          description: p.description,
+          image: p.Media?.[0]?.url ?? '',
+          company: p.TourismCompany?.name ?? 'Sin compañía',
+          companyLogo: p.TourismCompany?.logoUrl ?? '',
+          location: `${p.representativeCity?.name ?? 'Sin ciudad'}, ${p.representativeCity?.region?.name ?? 'Sin región'}`,
+          price: Number(p.PricingOption?.[0]?.amount ?? 0),
+          perPerson: p.PricingOption?.[0]?.perPerson ?? false,
+          rating: p.rating ?? 0,
+        })),
+      );
     } catch (error) {
       console.error('Error loading packages:', error);
     } finally {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    console.log('POPULAR PACKAGES RESPONSE:', packages);
+  }, [packages]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -37,10 +56,10 @@ export default function Home() {
         <section className="relative h-[500px] flex items-center justify-center">
           {/* Background Image */}
           <div
-            className="absolute inset-0 bg-cover bg-center"
+            className="absolute inset-0 bg-cover bg-top"
             style={{
               backgroundImage:
-                'linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600)',
+                "linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.05)), url('/images/search_background.jpg')",
             }}
           />
 

@@ -57,18 +57,20 @@ export interface Activity {
   StartDate: string;
   EndDate: string;
 }
-
+//utilizando en paquetes populares(pag.tsx)
 export interface PackageCard {
-  id: string;
+  id: number;
   title: string;
   company: string;
   price: number;
+  perPerson?: boolean;
   location: string;
   description: string;
   startDate: string;
   endDate: string;
   image?: string;
   badge?: 'Premium' | 'New';
+  rating: number;
 }
 
 export interface TouristPackage {
@@ -114,12 +116,12 @@ export interface TouristPackage {
     id: number;
     packageId: number;
     name: string;
-    description: string;
-    basePrice: number;
-    discountedPrice: number | null;
+    amount: string; // viene como string
+    perPerson: boolean;
     currencyId: number;
     isActive: boolean;
   }>;
+
   Media: Array<{
     id: number;
     packageId: number;
