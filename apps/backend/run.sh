@@ -22,7 +22,7 @@ case $MODE in
     
     # Generar cliente Prisma
     echo "🔧 Generando cliente Prisma..."
-    pnpx prisma generate
+    pnpm prisma generate
     
     # Ejecutar migraciones
     echo "🗄️  Ejecutando migraciones..."
