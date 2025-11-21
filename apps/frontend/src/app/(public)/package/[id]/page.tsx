@@ -7,6 +7,7 @@ import { packageService } from '@/features/packageDetail/packageService';
 import type { PackageDetail, PricingOption } from '@/types/PackageDetail';
 import type { Activity } from '@/types/Activity';
 import Link from 'next/link';
+import { Calendar, MapPin, Languages } from 'lucide-react';
 
 export default function PackageDetailPage() {
   const params = useParams();
@@ -384,14 +385,9 @@ export default function PackageDetailPage() {
                   >
                     {/* Nombre de la opción */}
                     <div className="mb-3 pb-3 border-b">
-                      <h3 className="text-sm font-bold text-gray-900">
+                      <h3 className="text-lg font-bold text-gray-900">
                         {option.name}
                       </h3>
-                      {option.description && (
-                        <p className="text-xs text-gray-600 mt-1">
-                          {option.description}
-                        </p>
-                      )}
                     </div>
 
                     {/* Precio */}
@@ -499,30 +495,41 @@ export default function PackageDetailPage() {
                     )}
 
                     {/* Información del paquete */}
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <span className="text-base">📅</span>
+                    <div className="flex items-center justify-between bg-white  rounded-lg p-4 mt-4">
+                      {/* Duración */}
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-gray-700" />
                         <div>
-                          <p className="text-xs text-gray-600">Duración</p>
-                          <p className="text-xs font-bold">
+                          <p className="text-[10px] text-gray-600 leading-tight">
+                            Duración
+                          </p>
+                          <p className="text-xs font-bold leading-tight">
                             {packageData.durationDays ?? 0} días
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <span className="text-base">📍</span>
+
+                      {/* Destinos */}
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-5 h-5 text-gray-700" />
                         <div>
-                          <p className="text-xs text-gray-600">Destinos</p>
-                          <p className="text-xs font-bold">
+                          <p className="text-[10px] text-gray-600 leading-tight">
+                            Destinos
+                          </p>
+                          <p className="text-xs font-bold leading-tight">
                             {packageData.destinations?.length ?? 0} lugares
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <span className="text-base">🗣️</span>
+
+                      {/* Idioma */}
+                      <div className="flex items-center gap-2">
+                        <Languages className="w-5 h-5 text-gray-700" />
                         <div>
-                          <p className="text-xs text-gray-600">Idioma</p>
-                          <p className="text-xs font-bold">
+                          <p className="text-[10px] text-gray-600 leading-tight">
+                            Idioma
+                          </p>
+                          <p className="text-xs font-bold leading-tight">
                             {packageData.Language?.name || 'Español'}
                           </p>
                         </div>
