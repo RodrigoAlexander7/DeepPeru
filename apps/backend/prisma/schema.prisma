@@ -163,6 +163,8 @@ model TourismCompany {
   /// Official registration date (legal or administrative)
   /// Example: "2025-01-15T00:00:00.000Z"
   registerDate       DateTime
+  /// Mercado Pago Account ID for split payments
+  mercadoPagoAccountId String?
   /// Whether the company is active in the system
   isActive           Boolean                     @default(true)
   /// Average rating from users or agencies

@@ -10,6 +10,11 @@ export default () => ({
     clientSecret: process.env.AUTH_GOOGLE_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL,
   },
+  mercadoPago: {
+    clientID: process.env.MERCADO_PAGO_CLIENT_ID,
+    clientSecret: process.env.MERCADO_PAGO_CLIENT_SECRET,
+    callbackURL: process.env.MERCADO_PAGO_CALLBACK_URL,
+  },
   authSecret: process.env.AUTH_SECRET,
   frontendURL: process.env.FRONTEND_URL,
 });

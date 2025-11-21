@@ -1,29 +1,48 @@
-import { Controller, Res, Get, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Res,
+  Get,
+  Request,
+  UseGuards,
+  Query,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthService } from '@/auth/auth.service';
 import type { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import type { GoogleAuthRequest } from './interfaces/google-user.interface';
+import type { MercadoPagoAuthRequest } from './interfaces/mercadopago-auth.interface';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 
-@Controller('auth') // all the routes under 'auth'
+@ApiTags('Authentication')
+@Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
   ) {}
 
-  // Call auth/google and then redirect to the google strategy (defined on google.Strategy)
-  // then the user is redirected to google login -> then is login we call the callback (defined on google.Strategy)
   @UseGuards(AuthGuard('google'))
   @Get('google')
+  @ApiOperation({ summary: 'Initiate Google OAuth flow' })
+  @ApiResponse({ status: 302, description: 'Redirects to Google login' })
   googleAuth() {
     return 'Google Auth';
   }
 
-  // Passport change the auth code with a token
-  // So we call auth/google/callback and then call -> callbackOauthGoogle
   @UseGuards(AuthGuard('google'))
   @Get('google/callback')
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  @ApiResponse({ status: 302, description: 'Redirects to frontend with token' })
   async googleAuthCallback(
     @Request() req: GoogleAuthRequest,
     @Res() res: Response,
@@ -42,6 +61,77 @@ export class AuthController {
       let message = 'Unknown error';
       if (error instanceof Error) message = error.message;
       res.redirect(`${frontendUrl}/auth/error?message=${message}`);
+    }
+  }
+
+  @UseGuards(JwtAuthGuard, AuthGuard('mercadopago'))
+  @Get('mercadopago/connect')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Initiate Mercado Pago OAuth flow for seller account connection',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to Mercado Pago authorization',
+  })
+  @ApiQuery({
+    name: 'companyId',
+    required: true,
+    type: Number,
+    description: 'Company ID to connect',
+  })
+  mercadoPagoConnect(@Query('companyId') companyId: string) {
+    if (!companyId) {
+      throw new BadRequestException('companyId is required');
+    }
+    return 'Mercado Pago Connect';
+  }
+
+  @UseGuards(JwtAuthGuard, AuthGuard('mercadopago'))
+  @Get('mercadopago/callback')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Mercado Pago OAuth callback - connects seller account',
+  })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to frontend with connection status',
+  })
+  @ApiQuery({
+    name: 'companyId',
+    required: true,
+    type: Number,
+    description: 'Company ID to connect',
+  })
+  async mercadoPagoCallback(
+    @Request() req: MercadoPagoAuthRequest,
+    @Query('companyId') companyId: string,
+    @CurrentUser('sub') userId: string,
+    @Res() res: Response,
+  ) {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+
+    try {
+      if (!companyId) {
+        throw new BadRequestException('companyId is required');
+      }
+
+      const result = await this.authService.callbackOauthMercadoPago(
+        req.user,
+        userId,
+        parseInt(companyId, 10),
+      );
+
+      res.redirect(
+        `${frontendUrl}/company/${companyId}/settings?mpConnected=true&mpUserId=${result.mercadoPagoUserId}`,
+      );
+    } catch (error: unknown) {
+      console.error('Error during Mercado Pago auth callback:', error);
+      let message = 'Unknown error';
+      if (error instanceof Error) message = error.message;
+      res.redirect(
+        `${frontendUrl}/company/${companyId}/settings?mpError=${encodeURIComponent(message)}`,
+      );
     }
   }
 }

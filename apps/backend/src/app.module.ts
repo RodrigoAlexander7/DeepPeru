@@ -9,6 +9,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { CompaniesModule } from './companies/companies.module';
 import { TouristPackagesModule } from './tourist-packages/tourist-packages.module';
 import { ActivitiesModule } from './activities/activities.module';
+import { BookingsModule } from './bookings/bookings.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   // Imports are allways modules, not services
@@ -26,6 +28,8 @@ import { ActivitiesModule } from './activities/activities.module';
     CompaniesModule,
     TouristPackagesModule,
     ActivitiesModule,
+    BookingsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   // Services by the module it self (no from other module)
