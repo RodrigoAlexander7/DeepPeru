@@ -7,27 +7,12 @@ import type {
 } from '@/types/company';
 
 /**
- * Obtiene el token de autenticación desde las cookies
- */
-async function getAuthHeaders() {
-  // En el cliente, necesitamos obtener el token de las cookies
-  // Como estamos en el cliente, usamos document.cookie
-  const token = document.cookie
-    .split('; ')
-    .find((row) => row.startsWith('access_token='))
-    ?.split('=')[1];
-
-  return {
-    Authorization: `Bearer ${token}`,
-  };
-}
-
-/**
  * Crea una nueva empresa
+ * La autenticación se maneja automáticamente mediante cookies HTTP-only
+ * enviadas por axios con withCredentials: true
  */
 export async function createCompany(data: CreateCompanyDto): Promise<Company> {
-  const headers = await getAuthHeaders();
-  const response = await api.post<Company>('/companies', data, { headers });
+  const response = await api.post<Company>('/companies', data);
   return response.data;
 }
 
@@ -35,8 +20,7 @@ export async function createCompany(data: CreateCompanyDto): Promise<Company> {
  * Obtiene las empresas del usuario autenticado
  */
 export async function getUserCompanies(): Promise<Company[]> {
-  const headers = await getAuthHeaders();
-  const response = await api.get<Company[]>('/companies', { headers });
+  const response = await api.get<Company[]>('/companies');
   return response.data;
 }
 
@@ -44,8 +28,7 @@ export async function getUserCompanies(): Promise<Company[]> {
  * Obtiene una empresa por ID
  */
 export async function getCompanyById(id: number): Promise<Company> {
-  const headers = await getAuthHeaders();
-  const response = await api.get<Company>(`/companies/${id}`, { headers });
+  const response = await api.get<Company>(`/companies/${id}`);
   return response.data;
 }
 
