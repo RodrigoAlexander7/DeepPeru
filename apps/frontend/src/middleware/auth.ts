@@ -11,6 +11,7 @@ req contains:
    - req.ip      -> the ip of the client (if it has one)
 */
 export function authMiddleware(req: NextRequest) {
+  console.log('Middleware ejecutándose en:', req.nextUrl.pathname);
   const token = req.cookies.get('access_token')?.value;
 
   const { pathname } = req.nextUrl;
@@ -27,3 +28,5 @@ export function authMiddleware(req: NextRequest) {
 
   return NextResponse.next();
 }
+
+export { routesConfig as config } from '@/config/protectedRoutes';
