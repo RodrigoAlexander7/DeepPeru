@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Header, Footer } from '@/components/layout';
 import { packageService } from '@/features/packageDetail/packageService';
 import type { PackageDetail } from '@/types/PackageDetail';
+import type { Activity } from '@/types/Activity';
+import Link from 'next/link';
 
 export default function PackageDetailPage() {
   const params = useParams();
@@ -14,14 +16,23 @@ export default function PackageDetailPage() {
   const [packageData, setPackageData] = useState<PackageDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
     const loadPackage = async () => {
       try {
         setLoading(true);
-        const data = await packageService.getPackageDetail(packageId);
-        setPackageData(data);
-        console.log('Datos del paquete cargado:', data);
+
+        //const data = await packageService.getPackageDetail(packageId);
+        const [packageData, activitiesData] = await Promise.all([
+          packageService.getPackageDetail(packageId),
+          packageService.getPackageActivities(packageId).catch(() => []),
+        ]);
+        setPackageData(packageData);
+        setActivities(activitiesData);
+
+        setPackageData(packageData);
+        console.log('Datos del paquete cargado:', packageData);
       } catch (err) {
         setError('Error cargando detalles del paquete');
         console.error(err);
@@ -183,24 +194,87 @@ export default function PackageDetailPage() {
               )}
 
             {/* Actividades */}
-            {packageData.activities && packageData.activities.length > 0 && (
+            {activities && activities.length > 0 && (
               <div className="bg-white rounded-lg p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Actividades
+                  Actividades Incluidas
                 </h2>
-                <ul className="list-disc list-inside text-gray-700 space-y-2">
-                  {packageData.activities.map((act, index) => (
-                    <li key={index}>
-                      <span className="font-semibold">{act.Activity.name}</span>
-                      {act.Activity.description && (
-                        <span className="text-gray-500">
-                          {' '}
-                          — {act.Activity.description}
-                        </span>
+                <div className="space-y-4">
+                  {activities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-gray-900 text-lg">
+                            {activity.name}
+                          </h3>
+                          {activity.destinationCity && (
+                            <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                />
+                              </svg>
+                              <span>{activity.destinationCity.name}</span>
+                            </div>
+                          )}
+                        </div>
+                        <Link
+                          href={`/activity/${activity.id}`}
+                          className="text-red-500 hover:text-red-600 text-sm font-medium"
+                        >
+                          Ver detalles →
+                        </Link>
+                      </div>
+
+                      {activity.description && (
+                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                          {activity.description}
+                        </p>
                       )}
-                    </li>
+
+                      {/* Features */}
+                      {activity.features && activity.features.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {activity.features.slice(0, 4).map((feature) => (
+                            <span
+                              key={feature.id}
+                              className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full"
+                            >
+                              {feature.name}
+                            </span>
+                          ))}
+                          {activity.features.length > 4 && (
+                            <span className="text-xs text-gray-500">
+                              +{activity.features.length - 4} más
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Horarios */}
+                      {activity.schedules && activity.schedules.length > 0 && (
+                        <div className="text-xs text-gray-600">
+                          <span className="font-medium">Horarios:</span>{' '}
+                          {activity.schedules[0].daysOfWeek.join(', ')} -{' '}
+                          {activity.schedules[0].startTime}
+                          {activity.schedules[0].endTime &&
+                            ` - ${activity.schedules[0].endTime}`}
+                        </div>
+                      )}
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
 
