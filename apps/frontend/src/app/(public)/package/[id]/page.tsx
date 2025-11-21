@@ -21,8 +21,7 @@ export default function PackageDetailPage() {
         setLoading(true);
         const data = await packageService.getPackageDetail(packageId);
         setPackageData(data);
-        console.log('📦 Datos del paquete cargado:', data);
-        console.log('💰 PricingOption:', data.PricingOption);
+        console.log('Datos del paquete cargado:', data);
       } catch (err) {
         setError('Error cargando detalles del paquete');
         console.error(err);
@@ -66,8 +65,6 @@ export default function PackageDetailPage() {
       excludedItems: packageData.excludedItems || [],
     };
 
-    console.log('🚀 Datos enviados al booking:', payload);
-
     // Construir query params con todos los datos del paquete
     const bookingParams = new URLSearchParams({
       packageId: packageId,
@@ -93,7 +90,7 @@ export default function PackageDetailPage() {
     });
 
     // Navegar a la página de booking con los parámetros
-    router.push(`/booking?${bookingParams.toString()}`);
+    router.push(`/booking/${packageId}`);
   };
 
   if (loading) {

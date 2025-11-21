@@ -5,69 +5,65 @@ import ContactForm from '@/components/booking/ContactForm';
 import ActivityDetails from '@/components/booking/ActivityDetails';
 import PaymentDetails from '@/components/booking/PaymentDetails';
 import { BookingFormData } from '@/types/booking';
-import { useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import StepSection from '@/components/booking/StepSection';
 import BookingSummary from '@/components/booking/BookingSummary';
+import { travelService } from '@/features/travel/travelService';
 
 export default function BookingPage() {
-  const params = useSearchParams();
+  const params = useParams();
+  const search = useSearchParams();
 
-  // Recibir email del usuario logueado (si existe en la URL)
-  const userEmail = params.get('email') || undefined;
-  const userName = params.get('name') || undefined;
+  const packageId = params.id;
+
+  const userEmail = search.get('email') || undefined;
+  const userName = search.get('name') || undefined;
 
   // Trackea el paso actual
   const [step, setStep] = useState(1);
 
-  // Construir packageData desde los params
   const [packageData, setPackageData] = useState<any>(null);
 
   useEffect(() => {
-    // Extraer datos del paquete desde la URL
-    const packageId = params.get('packageId');
-    const packageName = params.get('packageName');
-    const price = parseFloat(params.get('price') || '0');
-    const currency = params.get('currency') || 'USD';
-    const durationDays = parseInt(params.get('durationDays') || '1');
-    const description = params.get('description') || '';
-    const image = params.get('image') || '';
+    if (!packageId) return;
 
-    // Parsear arrays JSON
-    const destinations = params.get('destinations')
-      ? JSON.parse(params.get('destinations')!)
-      : [];
-    const activities = params.get('activities')
-      ? JSON.parse(params.get('activities')!)
-      : [];
-    const includedItems = params.get('includedItems')
-      ? JSON.parse(params.get('includedItems')!)
-      : [];
-    const excludedItems = params.get('excludedItems')
-      ? JSON.parse(params.get('excludedItems')!)
-      : [];
+    const loadPackage = async () => {
+      try {
+        const data = await travelService.getPackageById(Number(packageId));
 
-    // Construir objeto del paquete
-    if (packageId && packageName) {
-      setPackageData({
-        id: packageId,
-        name: packageName,
-        price,
-        currency,
-        durationDays,
-        description,
-        image,
-        destinations,
-        activities,
-        includedItems,
-        excludedItems,
-        date: 'Por confirmar', // Esto se puede seleccionar luego
-        cancellationPolicy: 'Cancelación gratuita hasta 24 horas antes',
-      });
-    }
-  }, [params]);
+        const price =
+          data.PricingOption?.length > 0
+            ? Number(data.PricingOption[0].amount)
+            : 0;
 
-  // Estado global del booking
+        setPackageData({
+          id: data.id,
+          name: data.name,
+          description: data.description,
+          price,
+          currency: data.PricingOption?.[0]?.currencyId === 2 ? 'PEN' : 'USD',
+          durationDays: data.durationDays || 1,
+          image: data.Media?.[0]?.url || '',
+          activities: data.activities || [],
+          includedItems: data.includedItems || [],
+          excludedItems: data.excludedItems || [],
+          cancellationPolicy:
+            data.cancellationPolicy ||
+            'Cancelación gratuita hasta 24 horas antes',
+          rating: data.rating || 4.9,
+          reviewCount: data.reviews?.length || 0,
+          TourismCompany: data.TourismCompany,
+        });
+      } catch (error) {
+        console.error('Error loading package:', error);
+      }
+    };
+
+    loadPackage();
+  }, [packageId]);
+
   const [formData, setFormData] = useState<BookingFormData>({
+    // Paso 1
     firstName: userName || '',
     lastName: '',
     email: userEmail || '',
@@ -75,12 +71,19 @@ export default function BookingPage() {
     phone: '',
     receiveTextUpdates: false,
     receiveEmailOffers: false,
+
+    // Paso 2
     travelers: [
       { id: '1', firstName: '', lastName: '' },
       { id: '2', firstName: '', lastName: '' },
     ],
     pickupLocation: '',
     tourLanguage: 'Español - Guía',
+
+    date: '',
+    time: '',
+
+    // Paso 3
     paymentOption: 'now',
     promoCode: '',
   });
@@ -99,10 +102,9 @@ export default function BookingPage() {
       formData,
       totalPrice,
     });
-    alert('Reserva completada 🎉 (Aquí enviarías la data al backend)');
+    alert('Reserva completada (Aquí enviarías la data al backend)');
   };
 
-  // Loading state mientras se cargan los datos del paquete
   if (!packageData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -116,7 +118,7 @@ export default function BookingPage() {
       <div className="container mx-auto px-4">
         {/* Layout de dos columnas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {/* Columna izquierda - Formularios (2/3) */}
+          {/* Columna izquierda (Formulario) */}
           <div className="lg:col-span-2 space-y-6">
             {/* -------- PASO 1 -------- */}
             <StepSection
@@ -152,7 +154,7 @@ export default function BookingPage() {
               summary={
                 <div>
                   <div className="font-semibold">{packageData.name}</div>
-                  <div>Fecha: {packageData.date}</div>
+                  <div>Fecha: {formData.date || '—'}</div>
                   <div>Personas: {formData.travelers.length}</div>
                 </div>
               }
@@ -174,8 +176,10 @@ export default function BookingPage() {
               onEdit={() => setStep(3)}
               summary={
                 <div>
-                  <div>Total a pagar: ${totalPrice}</div>
-                  <div>Opción de pago: {formData.paymentOption}</div>
+                  <div>
+                    Total a pagar: {packageData.currency} {totalPrice}
+                  </div>
+                  <div>Opción: {formData.paymentOption}</div>
                 </div>
               }
             >
@@ -191,18 +195,19 @@ export default function BookingPage() {
             </StepSection>
           </div>
 
-          {/* Columna derecha - Resumen del paquete (1/3) */}
+          {/* -------- COLUMNA DERECHA - RESUMEN -------- */}
           <div className="lg:col-span-1">
             <BookingSummary
               packageData={{
                 name: packageData.name,
                 image: packageData.image,
-                rating: 4.9,
-                reviewCount: 438,
-                provider: 'Cusipota Viajes y Turismo',
+                rating: packageData.rating,
+                reviewCount: packageData.reviewCount,
+                provider:
+                  packageData.TourismCompany?.name || 'Proveedor desconocido',
                 description: packageData.description,
-                date: 'sábado, 22 de noviembre de 2025',
-                time: '08:00',
+                date: formData.date || 'Selecciona una fecha',
+                time: formData.time || '08:00',
                 travelers: formData.travelers.length,
                 cancellationPolicy: packageData.cancellationPolicy,
                 price: totalPrice,

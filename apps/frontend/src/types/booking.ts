@@ -15,6 +15,10 @@ export interface BookingFormData {
   pickupLocation?: string;
   tourLanguage: string;
 
+  // 🔹 Agrega fecha y hora porque el usuario escoge esto
+  date: string;
+  time: string;
+
   // Paso 3: Pago
   paymentOption: 'now' | 'later';
   promoCode?: string;
@@ -27,6 +31,7 @@ export interface Traveler {
   isPrimary?: boolean;
 }
 
+// Datos del resumen
 export interface BookingSummaryData {
   packageId: number;
   packageName: string;
