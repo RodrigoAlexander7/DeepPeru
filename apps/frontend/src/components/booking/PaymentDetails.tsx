@@ -11,6 +11,7 @@ interface PaymentDetailsProps {
   totalPrice: number;
   cancellationPolicy: string;
   packageName: string;
+  currency: string; //
 }
 
 export default function PaymentDetails({
@@ -21,6 +22,7 @@ export default function PaymentDetails({
   totalPrice,
   cancellationPolicy,
   packageName,
+  currency,
 }: PaymentDetailsProps) {
   const [promoCodeLocal, setPromoCodeLocal] = useState(
     formData.promoCode || '',
@@ -28,14 +30,10 @@ export default function PaymentDetails({
   const [promoMessage, setPromoMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Mantener sincronizado el promo local con lo que venga desde formData
     setPromoCodeLocal(formData.promoCode || '');
   }, [formData.promoCode]);
 
   const handleApplyPromo = () => {
-    // Aquí solo guardamos el código en el state del formulario.
-    // Si quieres validarlo contra el backend, reemplaza esta lógica
-    // por una llamada a validatePromoCode(...) en bookingService.
     if (!promoCodeLocal.trim()) {
       setPromoMessage('Introduce un código promocional válido.');
       onUpdate({ promoCode: '' });
@@ -53,7 +51,6 @@ export default function PaymentDetails({
   };
 
   const handleWhatsAppPayment = () => {
-    // Construir mensaje de WhatsApp con los detalles de la reserva
     const message = `
 🎫 *NUEVA RESERVA - DeepPeru*
 
@@ -70,14 +67,16 @@ ${formData.travelers.map((t, i) => `  ${i + 1}. ${t.firstName} ${t.lastName}`).j
 📍 *Punto de recogida:* ${formData.pickupLocation || 'No especificado'}
 🗣️ *Idioma del tour:* ${formData.tourLanguage}
 
-💰 *Total a pagar:* S/ ${totalPrice.toFixed(2)}
+💰 *Total a pagar:* ${currency} ${totalPrice.toFixed(2)}
 💳 *Opción de pago:* ${formData.paymentOption === 'now' ? 'Pagar ahora' : 'Pagar después'}
 
 ${formData.promoCode ? `🎁 *Código promocional:* ${formData.promoCode}` : ''}
     `.trim();
 
-    const whatsappUrl = `https://wa.me/51999999999?text=${encodeURIComponent(message)}`;
-    // Abrir WhatsApp y luego proceder con la acción de submit (guardar/confirmar)
+    const whatsappUrl = `https://wa.me/51999999999?text=${encodeURIComponent(
+      message,
+    )}`;
+
     window.open(whatsappUrl, '_blank');
     onSubmit();
   };
@@ -105,11 +104,11 @@ ${formData.promoCode ? `🎁 *Código promocional:* ${formData.promoCode}` : ''}
                 className="h-4 w-4 text-red-500 focus:ring-red-500"
               />
               <span className="ml-3 font-medium text-gray-900">
-                Reservar ahora
+                Pagar ahora
               </span>
             </div>
             <span className="font-semibold text-gray-900">
-              S/ {totalPrice.toFixed(2)}
+              {currency} {totalPrice.toFixed(2)}
             </span>
           </label>
 
@@ -151,41 +150,43 @@ ${formData.promoCode ? `🎁 *Código promocional:* ${formData.promoCode}` : ''}
             value={promoCodeLocal}
             onChange={(e) => setPromoCodeLocal(e.target.value)}
             placeholder="Introduce tu código"
-            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-red-500 focus:ring-1 focus:ring-red-500"
           />
           <button
             type="button"
             onClick={handleApplyPromo}
-            className="rounded-full bg-[var(--primary)] px-4 py-2 font-semibold text-white hover:bg-[var(--primary-hover)] transition-colors"
+            className="rounded-full bg-[var(--primary)] px-4 py-2 font-semibold text-white hover:bg-[var(--primary-hover)]"
           >
             Aplicar
           </button>
+
           {formData.promoCode && (
             <button
               type="button"
               onClick={handleRemovePromo}
-              className="rounded-full border border-gray-300 bg-white px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+              className="rounded-full border border-gray-300 bg-white px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50"
             >
               Quitar
             </button>
           )}
         </div>
+
         {promoMessage && (
           <p className="mt-2 text-sm text-gray-600">{promoMessage}</p>
         )}
       </div>
 
-      {/* Resumen y política */}
+      {/* Resumen */}
       <div className="mb-6 rounded-lg border border-gray-200 p-4">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm text-gray-600">Total</div>
             <div className="mt-1 text-xl font-semibold text-gray-900">
-              S/ {totalPrice.toFixed(2)}
+              {currency} {totalPrice.toFixed(2)}
             </div>
           </div>
           <div className="text-right text-sm text-gray-600">
-            <div>{cancellationPolicy}</div>
+            {cancellationPolicy}
           </div>
         </div>
       </div>
@@ -195,26 +196,24 @@ ${formData.promoCode ? `🎁 *Código promocional:* ${formData.promoCode}` : ''}
         <button
           type="button"
           onClick={onBack}
-          className="rounded-full border border-gray-300 bg-white px-8 py-3 font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+          className="rounded-full border border-gray-300 bg-white px-8 py-3 font-semibold text-gray-700 hover:bg-gray-50"
         >
           Atrás
         </button>
 
         <div className="flex items-center gap-3">
-          {/* Pago por WhatsApp */}
           <button
             type="button"
             onClick={handleWhatsAppPayment}
-            className="rounded-full bg-[var(--primary)] px-6 py-3 font-semibold text-white hover:bg-[var(--primary-hover)] transition-colors"
+            className="rounded-full bg-[var(--primary)] px-6 py-3 font-semibold text-white hover:bg-[var(--primary-hover)]"
           >
             Pagar por WhatsApp
           </button>
 
-          {/* Finalizar sin pago (solo crear la reserva) */}
           <button
             type="button"
             onClick={onSubmit}
-            className="rounded-full border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            className="rounded-full border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50"
           >
             Finalizar reserva
           </button>

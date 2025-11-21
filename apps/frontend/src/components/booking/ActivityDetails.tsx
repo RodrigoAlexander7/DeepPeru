@@ -9,10 +9,21 @@ interface ActivityDetailsProps {
   packageData: {
     name: string;
     image: string;
+    rating: number;
+    reviewCount: number;
+    description: string;
+    provider: string;
     date: string;
     time: string;
     travelers: number;
     cancellationPolicy: string;
+  };
+  selectedPricing: {
+    minParticipants: number | null;
+    maxParticipants: number | null;
+    perPerson: boolean;
+    pricePerUnit: number;
+    currency: string;
   };
   pickupLocations?: string[];
   languages?: string[];
@@ -24,6 +35,7 @@ export default function ActivityDetails({
   onNext,
   onBack,
   packageData,
+  selectedPricing,
   pickupLocations = ['Plaza San Francisco', 'Plaza de Armas'],
   languages = ['Español - Guía', 'English - Guide'],
 }: ActivityDetailsProps) {
@@ -37,9 +49,9 @@ export default function ActivityDetails({
     field: keyof Traveler,
     value: string,
   ) => {
-    const newTravelers = [...formData.travelers];
-    newTravelers[index] = { ...newTravelers[index], [field]: value };
-    onUpdate({ travelers: newTravelers });
+    const updated = [...formData.travelers];
+    updated[index] = { ...updated[index], [field]: value };
+    onUpdate({ travelers: updated });
   };
 
   return (
@@ -53,132 +65,96 @@ export default function ActivityDetails({
             className="h-20 w-20 rounded object-cover"
           />
           <div className="flex-1">
-            <div className="mb-1 flex items-center text-xs text-[var(--primary)]">
-              <svg
-                className="mr-1 h-4 w-4"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <div className="text-xs text-[var(--primary)] mb-1">
               {packageData.cancellationPolicy}
             </div>
             <h3 className="font-semibold text-gray-900">{packageData.name}</h3>
-            <p className="text-sm text-gray-600">{packageData.name}</p>
-            <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
+            <p className="text-sm text-gray-600">{packageData.description}</p>
+
+            <div className="mt-2 text-sm text-gray-600">
               <span>
-                {packageData.date} • {packageData.time}
+                {packageData.date || 'Selecciona una fecha'} •{' '}
+                {packageData.time || '08:00'}
               </span>
-              <span>{packageData.travelers} adultos</span>
+              <span className="ml-4">{packageData.travelers} viajeros</span>
             </div>
           </div>
         </div>
 
-        {/* Viajeros */}
+        {/* VIAJEROS */}
         {formData.travelers.map((traveler, index) => (
           <div key={traveler.id} className="mb-6">
             <h3 className="mb-3 font-semibold text-gray-900">
               {index === 0 ? 'Viajero principal' : `Viajero ${index + 1}`}
             </h3>
+
             <div className="grid grid-cols-2 gap-4">
-              <div className="relative">
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+              {/* Nombre */}
+              <div>
+                <label className="block mb-1 text-sm font-medium text-gray-700">
                   Nombre <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
                   required
+                  type="text"
                   value={traveler.firstName}
                   onChange={(e) =>
                     updateTraveler(index, 'firstName', e.target.value)
                   }
-                  className="w-full rounded border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full rounded border border-gray-300 px-3 py-2 focus:ring-red-500 focus:border-red-500"
                 />
-                {index === 0 && traveler.firstName && (
-                  <svg
-                    className="absolute right-3 top-9 h-5 w-5 text-[var(--primary)]"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
               </div>
 
-              <div className="relative">
-                <label className="mb-1 block text-sm font-medium text-gray-700">
+              {/* Apellido */}
+              <div>
+                <label className="block mb-1 text-sm font-medium text-gray-700">
                   Apellido <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
                   required
+                  type="text"
                   value={traveler.lastName}
                   onChange={(e) =>
                     updateTraveler(index, 'lastName', e.target.value)
                   }
-                  className="w-full rounded border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full rounded border border-gray-300 px-3 py-2 focus:ring-red-500 focus:border-red-500"
                 />
-                {index === 0 && traveler.lastName && (
-                  <svg
-                    className="absolute right-3 top-9 h-5 w-5 text-[var(--primary)]"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
               </div>
             </div>
           </div>
         ))}
 
-        {/* Ubicación de recogida */}
+        {/* UBICACIÓN DE RECOGIDA */}
         {pickupLocations.length > 0 && (
           <div className="mb-6">
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label className="block mb-1 text-sm font-medium text-gray-700">
               Ubicación de recogida <span className="text-red-500">*</span>
             </label>
-            <p className="mb-2 text-sm text-gray-600">
-              El proveedor ofrece servicio de recogida en ubicaciones selectas.
-              Encuentra al proveedor en una de las ubicaciones de la lista.
-            </p>
             <select
               required
-              value={formData.pickupLocation || ''}
+              value={formData.pickupLocation}
               onChange={(e) => onUpdate({ pickupLocation: e.target.value })}
-              className="w-full rounded border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full rounded border border-gray-300 px-3 py-2 focus:ring-red-500 focus:border-red-500"
             >
               <option value="">Selecciona una ubicación</option>
-              {pickupLocations.map((location) => (
-                <option key={location} value={location}>
-                  {location}
+              {pickupLocations.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
                 </option>
               ))}
             </select>
           </div>
         )}
 
-        {/* Idioma del tour */}
+        {/* IDIOMA */}
         <div className="mb-6">
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Idioma del tour o de la actividad
+          <label className="block mb-1 text-sm font-medium text-gray-700">
+            Idioma del tour
           </label>
           <select
             value={formData.tourLanguage}
             onChange={(e) => onUpdate({ tourLanguage: e.target.value })}
-            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:ring-red-500 focus:border-red-500"
           >
             {languages.map((lang) => (
               <option key={lang} value={lang}>
@@ -188,18 +164,19 @@ export default function ActivityDetails({
           </select>
         </div>
 
-        {/* Botones */}
+        {/* BOTONES */}
         <div className="flex justify-between">
           <button
             type="button"
             onClick={onBack}
-            className="rounded-full border border-gray-300 bg-white px-8 py-3 font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            className="rounded-full border border-gray-300 bg-white px-8 py-3 font-semibold text-gray-700 hover:bg-gray-100"
           >
             Atrás
           </button>
+
           <button
             type="submit"
-            className="rounded-full bg-[var(--primary)] px-8 py-3 font-semibold text-white hover:bg-[var(--primary-hover)] transition-colors"
+            className="rounded-full bg-[var(--primary)] text-white px-8 py-3 font-semibold hover:bg-[var(--primary-hover)]"
           >
             Siguiente
           </button>

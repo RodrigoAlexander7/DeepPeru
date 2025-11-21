@@ -14,6 +14,11 @@ interface BookingSummaryProps {
     cancellationPolicy?: string;
     price: number;
     currency: string;
+
+    // NUEVOS CAMPOS
+    pricingOption: string;
+    pricePerUnit: number;
+    perPerson: boolean;
   };
 }
 
@@ -31,17 +36,21 @@ export default function BookingSummary({ packageData }: BookingSummaryProps) {
     cancellationPolicy,
     price,
     currency,
+    pricingOption,
+    pricePerUnit,
+    perPerson,
   } = packageData;
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 sticky top-4">
-      {/* Header con imagen */}
+      {/* Header */}
       <div className="flex gap-4 mb-4">
         <img
           src={image || '/placeholder.jpg'}
           alt={name}
           className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
         />
+
         <div className="flex-1">
           <h2 className="font-bold text-gray-900 text-lg leading-tight mb-1">
             {name}
@@ -50,6 +59,7 @@ export default function BookingSummary({ packageData }: BookingSummaryProps) {
           {/* Rating */}
           <div className="flex items-center gap-2 mb-1">
             <span className="font-bold text-gray-900">{rating}</span>
+
             <div className="flex text-[var(--primary)]">
               {'●●●●●'.split('').map((dot, i) => (
                 <span key={i} className="text-xs">
@@ -57,6 +67,7 @@ export default function BookingSummary({ packageData }: BookingSummaryProps) {
                 </span>
               ))}
             </div>
+
             <span className="text-sm text-gray-600">({reviewCount})</span>
           </div>
 
@@ -67,12 +78,12 @@ export default function BookingSummary({ packageData }: BookingSummaryProps) {
         </div>
       </div>
 
-      {/* Descripción corta */}
+      {/* Short description */}
       <p className="text-sm text-gray-700 mb-4 line-clamp-2">{description}</p>
 
       <hr className="my-4 border-gray-200" />
 
-      {/* Detalles de la reserva */}
+      {/* Booking details */}
       <div className="space-y-3">
         {date && (
           <div className="flex justify-between text-sm">
@@ -94,11 +105,28 @@ export default function BookingSummary({ packageData }: BookingSummaryProps) {
             {travelers} {travelers === 1 ? 'adulto' : 'adultos'}
           </span>
         </div>
+
+        {/* NEW: Precio por unidad */}
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">
+            {perPerson ? 'Precio por persona' : 'Precio por grupo'}
+          </span>
+          <span className="font-medium text-gray-900">
+            {currency === 'PEN' ? 'S/' : '$'}
+            {pricePerUnit.toFixed(2)}
+          </span>
+        </div>
+
+        {/* NEW: Tipo de tarifa */}
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Opción seleccionada</span>
+          <span className="font-medium text-gray-900">{pricingOption}</span>
+        </div>
       </div>
 
-      {/* Política de cancelación */}
+      {/* Cancellation policy */}
       {cancellationPolicy && (
-        <div className="mt-4 p-3  rounded-lg flex items-start gap-2">
+        <div className="mt-4 p-3 rounded-lg flex items-start gap-2">
           <svg
             className="w-5 h-5 text-[var(--primary)] flex-shrink-0 mt-0.5"
             fill="currentColor"
