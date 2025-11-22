@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { PT_Sans } from 'next/font/google';
 import GoogleSessionPill from '@/components/login/GoogleSessionPill';
+import RegisterBtn from '@/components/login/RegisterBtn';
 
 const ptSans = PT_Sans({
   weight: '400',
@@ -23,9 +24,7 @@ export default function Login() {
 
         <div className="flex flex-col gap-4 max-w-sm">
           <GoogleSessionPill />
-          <button className="text-blue-600 hover:underline text-sm">
-            Crea una cuenta
-          </button>
+          <RegisterBtn />
         </div>
       </main>
 
