@@ -11,7 +11,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  picture?: string;
+  image?: string;
 }
 
 export default function Header({ variant = 'default' }: HeaderProps) {
@@ -193,9 +193,9 @@ export default function Header({ variant = 'default' }: HeaderProps) {
                   `}
                   aria-label="User menu"
                 >
-                  {user.picture ? (
+                  {user.image ? (
                     <img
-                      src={user.picture}
+                      src={user.image}
                       alt={user.name}
                       className="w-full h-full rounded-full object-cover"
                     />

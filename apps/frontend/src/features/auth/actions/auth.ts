@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/apis';
+import { isAxiosError } from 'axios';
 
 async function getAuthToken() {
   const cookieStore = await cookies();
@@ -29,6 +30,13 @@ export async function getCurrentUser() {
 
     return response.data;
   } catch (error) {
+    if (
+      isAxiosError(error) &&
+      (error.response?.status === 401 || error.response?.status === 404)
+    ) {
+      // Expected auth errors, ignore
+      return null;
+    }
     console.error('Error fetching current user:', error);
     return null;
   }
