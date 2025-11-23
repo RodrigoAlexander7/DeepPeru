@@ -1,16 +1,32 @@
 import { redirect } from 'next/navigation';
-import { getUserCompanies } from '@/features/companies/services/companyService';
+import { cookies } from 'next/headers';
+import { api } from '@/lib/apis';
 import CreatePackageStepper from '@/features/packages/components/CreatePackageStepper';
+import type { Company } from '@/types/company';
 
-export default async function CreatePackagePage() {
-  let companies;
+async function getUserCompaniesServer(): Promise<Company[]> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('access_token')?.value;
+
+  if (!token) {
+    return [];
+  }
 
   try {
-    companies = await getUserCompanies();
+    const response = await api.get<Company[]>('/companies', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
   } catch (error) {
-    console.error('Error al obtener empresa:', error);
-    redirect('/dashboard');
+    console.error('Error al obtener empresas:', error);
+    return [];
   }
+}
+
+export default async function CreatePackagePage() {
+  const companies = await getUserCompaniesServer();
 
   if (!companies || companies.length === 0) {
     redirect('/become-operator');
