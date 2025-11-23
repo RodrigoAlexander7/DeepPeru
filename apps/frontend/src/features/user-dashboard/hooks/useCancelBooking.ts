@@ -7,7 +7,7 @@ export function useCancelBooking() {
   const [error, setError] = useState<string | null>(null);
 
   const cancelBooking = async (
-    bookingId: number,
+    bookingId: string | number,
     cancelData?: CancelBookingDto,
   ): Promise<BookingDetailsResponse> => {
     try {
@@ -16,8 +16,7 @@ export function useCancelBooking() {
       const result = await bookingService.cancelBooking(bookingId, cancelData);
       return result;
     } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message || 'Error al cancelar la reserva';
+      const errorMessage = err.message || 'Error al cancelar la reserva';
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {

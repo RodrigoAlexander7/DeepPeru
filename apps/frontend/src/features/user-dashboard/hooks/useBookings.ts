@@ -14,10 +14,12 @@ export function useBookings(initialFilters?: BookingFilters) {
       setLoading(true);
       setError(null);
       const response = await bookingService.getMyBookings(filters);
+      console.log('Bookings fetched:', response);
       setBookings(response.data);
       setTotal(response.total);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al cargar las reservas');
+      console.error('Error fetching bookings:', err);
+      setError(err.message || 'Error al cargar las reservas');
       setBookings([]);
     } finally {
       setLoading(false);

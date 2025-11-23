@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { bookingService } from '../services/bookingService';
 import { BookingDetailsResponse } from '@/types/booking-list';
 
-export function useBookingDetails(bookingId: number) {
+export function useBookingDetails(bookingId: string | number) {
   const [booking, setBooking] = useState<BookingDetailsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +14,7 @@ export function useBookingDetails(bookingId: number) {
       const data = await bookingService.getBookingDetails(bookingId);
       setBooking(data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al cargar la reserva');
+      setError(err.message || 'Error al cargar la reserva');
       setBooking(null);
     } finally {
       setLoading(false);
