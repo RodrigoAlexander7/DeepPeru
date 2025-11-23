@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
@@ -70,5 +71,77 @@ export class BookingsService {
         status: 'PENDING',
       },
     });
+  }
+
+  /**
+   * Find all bookings for a specific user with filters and pagination
+   * @param userId - User ID
+   * @param queryDto - Query filters (status, upcoming, past, page, limit)
+   * @returns Paginated bookings with related data
+   */
+  async findAllByUser(userId: string, queryDto: QueryBookingsDto) {
+    const { status, upcoming, past, page = 1, limit = 10 } = queryDto;
+
+    // Build where clause
+    const where: any = { userId };
+
+    // Filter by status if provided
+    if (status) {
+      where.status = status;
+    }
+
+    // Filter by date range
+    const now = new Date();
+    if (upcoming === true) {
+      where.travelDate = { gte: now };
+    } else if (past === true) {
+      where.travelDate = { lt: now };
+    }
+
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+
+    // Execute query with pagination
+    const [bookings, total] = await Promise.all([
+      this.prisma.booking.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { travelDate: 'desc' },
+        include: {
+          TouristPackage: {
+            include: {
+              TourismCompany: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                  logoUrl: true,
+                },
+              },
+              Media: {
+                where: { type: 'IMAGE' },
+                take: 1,
+                orderBy: { order: 'asc' },
+              },
+            },
+          },
+          PricingOption: true,
+          Currency: true,
+        },
+      }),
+      this.prisma.booking.count({ where }),
+    ]);
+
+    return {
+      data: bookings,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }
