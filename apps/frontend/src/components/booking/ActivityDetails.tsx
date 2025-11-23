@@ -103,6 +103,50 @@ export default function ActivityDetails({
           </div>
         </div>
 
+        {/* FECHA Y HORA DEL VIAJE */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h3 className="font-semibold text-gray-900 mb-4">
+            Fecha y hora del viaje
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Fecha */}
+            <div>
+              <label className="block mb-1 text-sm font-medium text-gray-700">
+                Fecha de inicio <span className="text-red-500">*</span>
+              </label>
+              <input
+                required
+                type="date"
+                value={formData.date}
+                onChange={(e) => onUpdate({ date: e.target.value })}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full rounded border border-gray-300 px-3 py-2 focus:ring-red-500 focus:border-red-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Selecciona la fecha de inicio de tu viaje
+              </p>
+            </div>
+
+            {/* Hora */}
+            <div>
+              <label className="block mb-1 text-sm font-medium text-gray-700">
+                Hora de inicio <span className="text-red-500">*</span>
+              </label>
+              <input
+                required
+                type="time"
+                value={formData.time}
+                onChange={(e) => onUpdate({ time: e.target.value })}
+                className="w-full rounded border border-gray-300 px-3 py-2 focus:ring-red-500 focus:border-red-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Hora de recogida o inicio del tour
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* VIAJEROS */}
         {formData.travelers.map((traveler, index) => (
           <div key={traveler.id} className="mb-6">

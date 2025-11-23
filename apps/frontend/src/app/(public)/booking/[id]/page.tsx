@@ -9,6 +9,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import StepSection from '@/components/booking/StepSection';
 import BookingSummary from '@/components/booking/BookingSummary';
 import { travelService } from '@/features/travel/travelService';
+import { bookingService } from '@/features/user-dashboard/services/bookingService';
 
 interface User {
   id: string;
@@ -46,6 +47,26 @@ export default function BookingPage() {
 
   const [packageData, setPackageData] = useState<any>(null);
   const [selectedPricing, setSelectedPricing] = useState<any>(null);
+  const [currencyMap, setCurrencyMap] = useState<Record<string, number>>({});
+
+  // Cargar mapa de currencies
+  useEffect(() => {
+    const loadCurrencies = async () => {
+      try {
+        const response = await fetch('/api/currencies');
+        if (response.ok) {
+          const map = await response.json();
+          setCurrencyMap(map);
+        }
+      } catch (error) {
+        console.error('Error loading currencies:', error);
+        // Usar valores fallback si falla
+        setCurrencyMap({ USD: 6, PEN: 7, BRL: 8, ARS: 9, CLP: 10 });
+      }
+    };
+
+    loadCurrencies();
+  }, []);
 
   // Cargar usuario actual
   useEffect(() => {
@@ -97,7 +118,7 @@ export default function BookingPage() {
         // Si se pasaron parámetros de precio en la URL, usarlos
         if (pricePerUnit && totalPrice) {
           setSelectedPricing({
-            id: pricingOptionId ? Number(pricingOptionId) : null,
+            id: pricingOption?.id || null, // Usar el ID validado del paquete, no el de la URL
             name: pricingName,
             pricePerUnit: Number(pricePerUnit),
             totalPrice: Number(totalPrice),
@@ -244,73 +265,63 @@ export default function BookingPage() {
       return;
     }
 
-    const bookingData = {
-      // IDs necesarios
-      userId: currentUser.id,
-      packageId: packageData.id,
-      pricingOptionId: selectedPricing.id,
+    // Validar que se haya seleccionado una fecha
+    if (!formData.date) {
+      alert('Por favor selecciona una fecha de viaje');
+      return;
+    }
 
-      // Datos del formulario
-      contactInfo: {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        countryCode: formData.countryCode,
-      },
+    // Validar que tengamos el currency map cargado
+    if (Object.keys(currencyMap).length === 0) {
+      alert('Cargando información de monedas, por favor espera...');
+      return;
+    }
 
-      // Detalles de la actividad
-      activityDetails: {
-        date: formData.date,
-        time: formData.time,
-        travelers: formData.travelers,
-        pickupLocation: formData.pickupLocation,
-        tourLanguage: formData.tourLanguage,
-      },
+    // Determinar currencyId basado en el código de moneda
+    // Usar el currencyMap dinámico cargado desde el backend
+    const currencyCode =
+      selectedPricing.currency === 'S/' ? 'PEN' : selectedPricing.currency;
+    const currencyId = currencyMap[currencyCode] || currencyMap['USD'];
 
-      // Detalles de pago
-      paymentDetails: {
-        paymentOption: formData.paymentOption,
-        promoCode: formData.promoCode,
-        totalPrice: currentTotalPrice,
-        currency: selectedPricing.currency,
-      },
+    if (!currencyId) {
+      alert(
+        'Error: No se pudo determinar la moneda. Por favor intenta de nuevo.',
+      );
+      return;
+    }
 
-      // Información adicional
-      preferences: {
-        receiveTextUpdates: formData.receiveTextUpdates,
-        receiveEmailOffers: formData.receiveEmailOffers,
-      },
+    const bookingData: any = {
+      packageId: Number(packageData.id),
+      travelDate: formData.date, // Fecha en formato ISO (YYYY-MM-DD)
+      numberOfParticipants: formData.travelers.length,
+      currencyId: currencyId,
     };
 
+    // Solo agregar pricingOptionId si existe y es un número válido
+    if (selectedPricing.id && typeof selectedPricing.id === 'number') {
+      bookingData.pricingOptionId = Number(selectedPricing.id);
+    }
+
     console.log('Enviando reserva al backend:', bookingData);
+    console.log('Selected pricing:', selectedPricing);
+    console.log('Package pricing options:', packageData.PricingOption);
+    console.log('Currency map:', currencyMap);
+    console.log('Currency code:', currencyCode, '-> ID:', currencyId);
 
     try {
-      /* Aquí harías el POST a tu backend
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(bookingData),
-      });
+      const result = await bookingService.createBooking(bookingData);
 
-      if (response.ok) {
-        const result = await response.json();
-        alert('¡Reserva completada exitosamente!');
-        console.log('Resultado de la reserva:', result);
+      console.log('Resultado de la reserva:', result);
+      alert('¡Reserva completada exitosamente!');
 
-        // Redirigir a página de confirmación
-        router.push(`/booking/confirmation/${result.bookingId}`);
-      } else {
-        const error = await response.json();
-        alert(`Error al crear la reserva: ${error.message}`);
-      }*/
-    } catch (error) {
-      console.error('Error al enviar la reserva:', error);
-      alert(
-        'Hubo un error al procesar tu reserva. Por favor intenta de nuevo.',
-      );
+      // Redirigir al dashboard para ver la reserva
+      router.push('/dashboard');
+    } catch (error: any) {
+      console.error('Error completo al enviar la reserva:', error);
+      const errorMessage =
+        error.message ||
+        'Hubo un error al procesar tu reserva. Por favor intenta de nuevo.';
+      alert(`Error: ${errorMessage}`);
     }
   };
 
