@@ -26,6 +26,19 @@ export default function ProfileForm({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Actualizar formData cuando initialData cambie
+  useEffect(() => {
+    setFormData({
+      firstName: initialData.firstName || '',
+      lastName: initialData.lastName || '',
+      dateOfBirth: initialData.dateOfBirth || '',
+      gender: initialData.gender,
+      phoneNumber: initialData.phone?.phoneNumber || '',
+      countryCode: initialData.phone?.countryCode || '+51',
+      picture: initialData.picture || '',
+    });
+  }, [initialData]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {

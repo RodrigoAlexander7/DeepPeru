@@ -6,7 +6,7 @@ import { useCancelBooking } from '@/features/user-dashboard/hooks/useCancelBooki
 interface CancelBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  bookingId: number;
+  bookingId: string | number;
   cancellationPolicy: string;
   onSuccess: () => void;
 }

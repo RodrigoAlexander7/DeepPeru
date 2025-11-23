@@ -11,8 +11,10 @@ export default function DashboardStats({ bookings }: DashboardStatsProps) {
   const totalBookings = bookings.length;
 
   const upcomingBookings = bookings.filter((booking) => {
-    const startDate = new Date(booking.startDate);
-    return startDate > new Date() && booking.status !== 'CANCELLED';
+    // Usar travelDate si startDate no está disponible
+    const dateToCheck = booking.startDate || booking.travelDate;
+    const travelDate = new Date(dateToCheck);
+    return travelDate > new Date() && booking.status !== 'CANCELLED';
   }).length;
 
   const completedBookings = bookings.filter(
@@ -21,10 +23,21 @@ export default function DashboardStats({ bookings }: DashboardStatsProps) {
 
   const totalSpent = bookings
     .filter((booking) => booking.status !== 'CANCELLED')
-    .reduce((sum, booking) => sum + booking.totalPrice, 0);
+    .reduce((sum, booking) => {
+      const amount = booking.totalPrice || (booking as any).totalAmount || 0;
+      return sum + Number(amount);
+    }, 0);
 
-  // Obtener símbolo de moneda (usar el primero disponible)
-  const currencySymbol = bookings[0]?.currency.symbol || '$';
+  // Obtener símbolo de moneda (manejar tanto 'currency' como 'Currency' y el caso de array vacío)
+  const getCurrencySymbol = () => {
+    if (bookings.length === 0) return '$';
+    const firstBooking = bookings[0] as any;
+    return (
+      firstBooking?.Currency?.symbol || firstBooking?.currency?.symbol || '$'
+    );
+  };
+
+  const currencySymbol = getCurrencySymbol();
 
   const stats = [
     {
@@ -92,7 +105,7 @@ export default function DashboardStats({ bookings }: DashboardStatsProps) {
     },
     {
       label: 'Total Gastado',
-      value: `${currencySymbol}${totalSpent.toFixed(2)}`,
+      value: `${currencySymbol}${Number(totalSpent).toFixed(2)}`,
       icon: (
         <svg
           className="w-8 h-8"

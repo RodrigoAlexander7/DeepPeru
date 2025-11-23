@@ -10,18 +10,59 @@ interface BookingCardProps {
 }
 
 export default function BookingCard({ booking, onClick }: BookingCardProps) {
+  // Obtener datos del paquete (puede venir como TouristPackage o touristPackage)
+  const packageData = (booking as any).TouristPackage || booking.touristPackage;
+  const currencyData = (booking as any).Currency || booking.currency;
+
   const imageUrl =
-    booking.touristPackage.images?.[0]?.url || '/images/placeholder.jpg';
+    packageData?.Media?.[0]?.url ||
+    packageData?.images?.[0]?.url ||
+    '/images/placeholder.jpg';
 
   // Formatear fechas
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    if (!dateString) return 'N/A';
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+
+      return date.toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
+
+  // Calcular fecha de inicio y fin basado en travelDate y durationDays
+  const startDate = booking.startDate || booking.travelDate;
+  const endDate =
+    booking.endDate ||
+    (() => {
+      const travelDateStr = booking.travelDate;
+      if (!travelDateStr) return '';
+
+      try {
+        const start = new Date(travelDateStr);
+        if (isNaN(start.getTime())) return travelDateStr;
+
+        const duration = packageData?.durationDays || 1;
+        start.setDate(start.getDate() + duration - 1);
+        return start.toISOString();
+      } catch (error) {
+        return travelDateStr;
+      }
+    })();
+
+  const numberOfTravelers =
+    booking.numberOfTravelers || booking.numberOfParticipants;
+
+  // Convertir totalPrice a número (puede venir como Decimal de Prisma o string)
+  const rawPrice = booking.totalPrice || (booking as any).totalAmount || 0;
+  const totalPrice = typeof rawPrice === 'number' ? rawPrice : Number(rawPrice);
 
   return (
     <div
@@ -32,7 +73,7 @@ export default function BookingCard({ booking, onClick }: BookingCardProps) {
       <div className="relative h-48 w-full">
         <Image
           src={imageUrl}
-          alt={booking.touristPackage.name}
+          alt={packageData?.name || 'Paquete turístico'}
           fill
           className="object-cover"
         />
@@ -44,11 +85,11 @@ export default function BookingCard({ booking, onClick }: BookingCardProps) {
       {/* Contenido */}
       <div className="p-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
-          {booking.touristPackage.name}
+          {packageData?.name || 'Paquete sin nombre'}
         </h3>
 
         <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-          {booking.touristPackage.description}
+          {packageData?.description || 'Sin descripción'}
         </p>
 
         {/* Fechas */}
@@ -67,7 +108,7 @@ export default function BookingCard({ booking, onClick }: BookingCardProps) {
             />
           </svg>
           <span>
-            {formatDate(booking.startDate)} - {formatDate(booking.endDate)}
+            {formatDate(startDate)} - {formatDate(endDate)}
           </span>
         </div>
 
@@ -87,8 +128,8 @@ export default function BookingCard({ booking, onClick }: BookingCardProps) {
             />
           </svg>
           <span>
-            {booking.numberOfTravelers}{' '}
-            {booking.numberOfTravelers === 1 ? 'viajero' : 'viajeros'}
+            {numberOfTravelers}{' '}
+            {numberOfTravelers === 1 ? 'viajero' : 'viajeros'}
           </span>
         </div>
 
@@ -96,8 +137,8 @@ export default function BookingCard({ booking, onClick }: BookingCardProps) {
         <div className="flex items-center justify-between pt-3 border-t border-gray-200">
           <span className="text-sm text-gray-600">Total</span>
           <span className="text-xl font-bold text-gray-900">
-            {booking.currency.symbol}
-            {booking.totalPrice.toFixed(2)}
+            {currencyData?.symbol || '$'}
+            {totalPrice.toFixed(2)}
           </span>
         </div>
 

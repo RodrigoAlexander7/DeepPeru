@@ -21,7 +21,7 @@ export default function BookingsList({ filters }: BookingsListProps) {
     setFilters,
   } = useBookings(filters);
 
-  const handleBookingClick = (bookingId: number) => {
+  const handleBookingClick = (bookingId: string | number) => {
     router.push(`/bookings/${bookingId}`);
   };
 

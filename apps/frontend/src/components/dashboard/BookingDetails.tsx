@@ -7,7 +7,7 @@ import BookingStatusBadge from './BookingStatusBadge';
 import CancelBookingModal from './CancelBookingModal';
 
 interface BookingDetailsProps {
-  bookingId: number;
+  bookingId: string | number;
 }
 
 export default function BookingDetails({ bookingId }: BookingDetailsProps) {
@@ -16,17 +16,92 @@ export default function BookingDetails({ bookingId }: BookingDetailsProps) {
   const [showCancelModal, setShowCancelModal] = useState(false);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+    if (!dateString) return 'N/A';
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString; // Si la fecha no es válida, retornar el string
+
+      return date.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
   const canBeCancelled =
     booking?.status === 'CONFIRMED' || booking?.status === 'PENDING';
+
+  // Helpers para obtener datos compatibles con ambas estructuras
+  const getPackageData = () => {
+    if (!booking) return null;
+    return (booking as any).TouristPackage || booking.touristPackage;
+  };
+
+  const getCompanyData = () => {
+    const pkg = getPackageData();
+    return pkg?.TourismCompany || pkg?.company;
+  };
+
+  const getCurrencyData = () => {
+    if (!booking) return null;
+    return (booking as any).Currency || booking.currency;
+  };
+
+  const getStartDate = () => {
+    if (!booking) return '';
+    return booking.startDate || booking.travelDate;
+  };
+
+  const getEndDate = () => {
+    if (!booking) return '';
+    if (booking.endDate) return booking.endDate;
+
+    const packageData = getPackageData();
+    const travelDateStr = booking.travelDate || booking.startDate;
+
+    if (!travelDateStr) return '';
+
+    try {
+      const start = new Date(travelDateStr);
+
+      // Verificar si la fecha es válida ANTES de hacer cualquier operación
+      if (isNaN(start.getTime())) {
+        console.warn('Invalid travel date:', travelDateStr);
+        return travelDateStr; // Si la fecha no es válida, retornar el string original
+      }
+
+      const duration = packageData?.durationDays || packageData?.duration || 1;
+      start.setDate(start.getDate() + duration - 1);
+
+      // Verificar nuevamente después de hacer el cálculo
+      if (isNaN(start.getTime())) {
+        return travelDateStr;
+      }
+
+      return start.toISOString();
+    } catch (error) {
+      console.error('Error calculating end date:', error);
+      return travelDateStr;
+    }
+  };
+
+  const getTotalPrice = () => {
+    if (!booking) return 0;
+    const rawPrice = booking.totalPrice || (booking as any).totalAmount || 0;
+    return typeof rawPrice === 'number' ? rawPrice : Number(rawPrice);
+  };
+
+  const getNumberOfTravelers = () => {
+    if (!booking) return 0;
+    return (
+      booking.numberOfTravelers || (booking as any).numberOfParticipants || 0
+    );
+  };
 
   if (loading) {
     return (
@@ -51,6 +126,14 @@ export default function BookingDetails({ bookingId }: BookingDetailsProps) {
       </div>
     );
   }
+
+  const packageData = getPackageData();
+  const companyData = getCompanyData();
+  const currencyData = getCurrencyData();
+  const startDate = getStartDate();
+  const endDate = getEndDate();
+  const totalPrice = getTotalPrice();
+  const numberOfTravelers = getNumberOfTravelers();
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -96,10 +179,10 @@ export default function BookingDetails({ bookingId }: BookingDetailsProps) {
         <div className="space-y-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
-              {booking.touristPackage.name}
+              {packageData?.name || 'Paquete sin nombre'}
             </h3>
             <p className="text-gray-600 mt-1">
-              {booking.touristPackage.description}
+              {packageData?.description || 'Sin descripción'}
             </p>
           </div>
 
@@ -107,26 +190,24 @@ export default function BookingDetails({ bookingId }: BookingDetailsProps) {
             <div>
               <p className="text-sm text-gray-600">Fecha de inicio</p>
               <p className="font-semibold text-gray-900">
-                {formatDate(booking.startDate)}
+                {formatDate(startDate)}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Fecha de finalización</p>
               <p className="font-semibold text-gray-900">
-                {formatDate(booking.endDate)}
+                {formatDate(endDate)}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Duración</p>
               <p className="font-semibold text-gray-900">
-                {booking.touristPackage.duration} días
+                {packageData?.durationDays || packageData?.duration || 1} días
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Número de viajeros</p>
-              <p className="font-semibold text-gray-900">
-                {booking.numberOfTravelers}
-              </p>
+              <p className="font-semibold text-gray-900">{numberOfTravelers}</p>
             </div>
           </div>
 
@@ -135,28 +216,24 @@ export default function BookingDetails({ bookingId }: BookingDetailsProps) {
               Política de cancelación
             </p>
             <p className="text-gray-900">
-              {booking.touristPackage.cancellationPolicy}
+              {packageData?.cancellationPolicy || 'No especificada'}
             </p>
           </div>
         </div>
       </div>
 
       {/* Información de la Empresa */}
-      {booking.touristPackage.company && (
+      {companyData && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             Empresa Operadora
           </h2>
           <div className="space-y-2">
-            <p className="font-semibold text-gray-900">
-              {booking.touristPackage.company.name}
-            </p>
-            <p className="text-sm text-gray-600">
-              Email: {booking.touristPackage.company.email}
-            </p>
-            {booking.touristPackage.company.phone && (
+            <p className="font-semibold text-gray-900">{companyData.name}</p>
+            <p className="text-sm text-gray-600">Email: {companyData.email}</p>
+            {companyData.phone && (
               <p className="text-sm text-gray-600">
-                Teléfono: {booking.touristPackage.company.phone}
+                Teléfono: {companyData.phone}
               </p>
             )}
           </div>
@@ -164,48 +241,47 @@ export default function BookingDetails({ bookingId }: BookingDetailsProps) {
       )}
 
       {/* Itinerario (Actividades) */}
-      {booking.touristPackage.activities &&
-        booking.touristPackage.activities.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Itinerario</h2>
-            <div className="space-y-4">
-              {booking.touristPackage.activities
-                .sort((a, b) => a.day - b.day)
-                .map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="border-l-4 border-[var(--primary)] pl-4 py-2"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-[var(--primary)]">
-                        Día {activity.day}
+      {packageData?.activities && packageData.activities.length > 0 && (
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Itinerario</h2>
+          <div className="space-y-4">
+            {packageData.activities
+              .sort((a: any, b: any) => a.day - b.day)
+              .map((activity: any) => (
+                <div
+                  key={activity.id}
+                  className="border-l-4 border-[var(--primary)] pl-4 py-2"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-[var(--primary)]">
+                      Día {activity.day}
+                    </span>
+                    {activity.startTime && (
+                      <span className="text-sm text-gray-600">
+                        • {activity.startTime}
+                        {activity.endTime && ` - ${activity.endTime}`}
                       </span>
-                      {activity.startTime && (
-                        <span className="text-sm text-gray-600">
-                          • {activity.startTime}
-                          {activity.endTime && ` - ${activity.endTime}`}
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="font-semibold text-gray-900">
-                      {activity.name}
-                    </h4>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {activity.description}
-                    </p>
+                    )}
                   </div>
-                ))}
-            </div>
+                  <h4 className="font-semibold text-gray-900">
+                    {activity.name}
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {activity.description}
+                  </p>
+                </div>
+              ))}
           </div>
-        )}
+        </div>
+      )}
 
       {/* Locaciones */}
-      {booking.touristPackage.locations &&
-        booking.touristPackage.locations.length > 0 && (
+      {packageData?.PackageLocation &&
+        packageData.PackageLocation.length > 0 && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Locaciones</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {booking.touristPackage.locations.map((loc, index) => (
+              {packageData.PackageLocation.map((loc: any, index: number) => (
                 <div
                   key={index}
                   className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
@@ -233,12 +309,20 @@ export default function BookingDetails({ bookingId }: BookingDetailsProps) {
                     <p className="font-semibold text-gray-900">
                       {loc.location.name}
                     </p>
-                    <p className="text-sm text-gray-600">
-                      {loc.location.city.name}, {loc.location.city.region.name}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {loc.location.city.region.country.name}
-                    </p>
+                    {loc.location.City && (
+                      <>
+                        <p className="text-sm text-gray-600">
+                          {loc.location.City.name}
+                          {loc.location.City.Region &&
+                            `, ${loc.location.City.Region.name}`}
+                        </p>
+                        {loc.location.City.Region?.Country && (
+                          <p className="text-sm text-gray-500">
+                            {loc.location.City.Region.Country.name}
+                          </p>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -255,14 +339,14 @@ export default function BookingDetails({ bookingId }: BookingDetailsProps) {
           <div className="flex justify-between items-center pb-3 border-b border-gray-200">
             <span className="text-gray-600">Moneda</span>
             <span className="font-semibold text-gray-900">
-              {booking.currency.name} ({booking.currency.code})
+              {currencyData?.name || 'N/A'} ({currencyData?.code || 'N/A'})
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-lg font-semibold text-gray-900">Total</span>
             <span className="text-2xl font-bold text-[var(--primary)]">
-              {booking.currency.symbol}
-              {booking.totalPrice.toFixed(2)}
+              {currencyData?.symbol || '$'}
+              {totalPrice.toFixed(2)}
             </span>
           </div>
         </div>
@@ -273,10 +357,11 @@ export default function BookingDetails({ bookingId }: BookingDetailsProps) {
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
         bookingId={booking.id}
-        cancellationPolicy={booking.touristPackage.cancellationPolicy}
+        cancellationPolicy={
+          packageData?.cancellationPolicy || 'No especificada'
+        }
         onSuccess={() => {
           refresh();
-          // Opcionalmente mostrar un toast de éxito
         }}
       />
     </div>
