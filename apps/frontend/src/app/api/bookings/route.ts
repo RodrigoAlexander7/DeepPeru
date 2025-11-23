@@ -1,26 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { api } from '@/lib/apis';
-import { cookies } from 'next/headers';
+import { getAuthApi } from '@/lib/apiAuth';
 
 export async function POST(req: NextRequest) {
   try {
     const bookingData = await req.json();
 
-    // Obtener el token de autenticación
-    const cookieStore = await cookies();
-    const token = cookieStore.get('access_token')?.value;
-
-    if (!token) {
-      return NextResponse.json({ message: 'No autenticado' }, { status: 401 });
-    }
+    const api = await getAuthApi();
 
     // Enviar la reserva al backend
-    const response = await api.post('/bookings', bookingData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await api.post('/bookings', bookingData);
 
     return NextResponse.json({
       success: true,
