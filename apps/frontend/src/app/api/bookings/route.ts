@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { api } from '@/lib/apis';
 import { cookies } from 'next/headers';
+
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  process.env.BACKEND_URL ||
+  'http://127.0.0.1:3000';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,18 +18,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'No autenticado' }, { status: 401 });
     }
 
-    // Enviar la reserva al backend
-    const response = await api.post('/bookings', bookingData, {
+    // Enviar la reserva al backend usando fetch
+    const response = await fetch(`${BACKEND_URL}/bookings`, {
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(bookingData),
     });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          message: data.message || 'Error al crear la reserva',
+          error: data.error,
+        },
+        { status: response.status },
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      bookingId: response.data.id,
-      booking: response.data,
+      bookingId: data.id,
+      booking: data,
       message: 'Reserva creada exitosamente',
     });
   } catch (error: any) {
@@ -33,10 +51,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       {
-        message: error.response?.data?.message || 'Error al crear la reserva',
+        message: 'Error al crear la reserva',
         error: error.message,
       },
-      { status: error.response?.status || 500 },
+      { status: 500 },
     );
   }
 }
