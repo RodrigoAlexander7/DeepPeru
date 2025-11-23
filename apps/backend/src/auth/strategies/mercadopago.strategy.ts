@@ -26,16 +26,31 @@ export class MercadoPagoStrategy extends PassportStrategy(
       clientSecret,
       callbackURL,
       scope: ['read', 'write'],
+      passReqToCallback: true,
     });
   }
 
-  validate(
+  async validate(
+    req: Request & { query: { state?: string } },
     accessToken: string,
     refreshToken: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    return Promise.resolve({
+  ): Promise<{ accessToken: string; refreshToken: string; companyId: number }> {
+    const state = req.query.state;
+
+    if (!state || !state.startsWith('company_')) {
+      throw new Error('Invalid state parameter');
+    }
+
+    const companyId = parseInt(state.replace('company_', ''), 10);
+
+    if (isNaN(companyId)) {
+      throw new Error('Invalid companyId in state');
+    }
+
+    return {
       accessToken,
       refreshToken,
-    });
+      companyId,
+    };
   }
 }

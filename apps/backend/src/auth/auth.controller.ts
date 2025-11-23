@@ -6,7 +6,6 @@ import {
   UseGuards,
   Query,
   BadRequestException,
-  ParseIntPipe,
 } from '@nestjs/common';
 import { AuthService } from '@/auth/auth.service';
 import type { Response } from 'express';
@@ -15,7 +14,6 @@ import { ConfigService } from '@nestjs/config';
 import type { GoogleAuthRequest } from './interfaces/google-user.interface';
 import type { MercadoPagoAuthRequest } from './interfaces/mercadopago-auth.interface';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { CurrentUser } from './decorators/current-user.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -65,7 +63,7 @@ export class AuthController {
     }
   }
 
-  @UseGuards(JwtAuthGuard, AuthGuard('mercadopago'))
+  @UseGuards(JwtAuthGuard)
   @Get('mercadopago/connect')
   @ApiBearerAuth()
   @ApiOperation({
@@ -81,16 +79,36 @@ export class AuthController {
     type: Number,
     description: 'Company ID to connect',
   })
-  mercadoPagoConnect(@Query('companyId') companyId: string) {
+  mercadoPagoConnect(
+    @Query('companyId') companyId: string,
+    @Res() res: Response,
+  ) {
     if (!companyId) {
       throw new BadRequestException('companyId is required');
     }
-    return 'Mercado Pago Connect';
+
+    const clientId = this.configService.get<string>('MERCADO_PAGO_CLIENT_ID');
+    const redirectUri = this.configService.get<string>(
+      'MERCADO_PAGO_CALLBACK_URL',
+    );
+
+    if (!clientId || !redirectUri) {
+      throw new BadRequestException('MercadoPago configuration is missing');
+    }
+
+    const state = `company_${companyId}`;
+
+    const url =
+      `https://auth.mercadopago.com.pe/authorization?` +
+      `response_type=code&client_id=${clientId}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&state=${state}`;
+
+    return res.redirect(url);
   }
 
-  @UseGuards(JwtAuthGuard, AuthGuard('mercadopago'))
+  @UseGuards(AuthGuard('mercadopago'))
   @Get('mercadopago/callback')
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Mercado Pago OAuth callback - connects seller account',
   })
@@ -98,22 +116,17 @@ export class AuthController {
     status: 302,
     description: 'Redirects to frontend with connection status',
   })
-  @ApiQuery({
-    name: 'companyId',
-    required: true,
-    type: Number,
-    description: 'Company ID to connect',
-  })
   async mercadoPagoCallback(
     @Request() req: MercadoPagoAuthRequest,
-    @Query('companyId', ParseIntPipe) companyId: number,
     @Res() res: Response,
   ) {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL');
 
     try {
+      const { companyId } = req.user;
+
       if (!companyId) {
-        throw new BadRequestException('companyId is required');
+        throw new BadRequestException('companyId missing from state');
       }
 
       const result = await this.authService.callbackOauthMercadoPago(
@@ -129,7 +142,7 @@ export class AuthController {
       let message = 'Unknown error';
       if (error instanceof Error) message = error.message;
       res.redirect(
-        `${frontendUrl}/become-operator?step=3&companyId=${companyId}&mp_status=error&mp_error=${encodeURIComponent(message)}`,
+        `${frontendUrl}/become-operator?step=3&mp_status=error&mp_error=${encodeURIComponent(message)}`,
       );
     }
   }
