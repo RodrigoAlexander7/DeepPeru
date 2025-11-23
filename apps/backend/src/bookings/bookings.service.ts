@@ -3,10 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
+import { CancelBookingDto } from './dto/cancel-booking.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
@@ -236,5 +238,183 @@ export class BookingsService {
     }
 
     return booking;
+  }
+
+  /**
+   * Cancel a booking
+   * @param bookingId - Booking ID
+   * @param userId - User ID
+   * @param cancelDto - Cancellation details
+   * @returns Updated booking
+   * @throws NotFoundException if booking doesn't exist
+   * @throws ForbiddenException if booking doesn't belong to user
+   * @throws ConflictException if booking cannot be cancelled
+   */
+  async cancelBooking(
+    bookingId: string,
+    userId: string,
+    cancelDto: CancelBookingDto,
+  ) {
+    // Find booking with package details for policy validation
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        TouristPackage: {
+          select: {
+            id: true,
+            name: true,
+            cancellationPolicy: true,
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    // Validate ownership
+    if (booking.userId !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to cancel this booking',
+      );
+    }
+
+    // Validate booking status - can only cancel PENDING or CONFIRMED bookings
+    if (booking.status === 'CANCELLED') {
+      throw new ConflictException('Booking is already cancelled');
+    }
+
+    if (booking.status === 'COMPLETED') {
+      throw new ConflictException('Cannot cancel a completed booking');
+    }
+
+    // Validate cancellation policy based on travel date
+    const now = new Date();
+    const travelDate = new Date(booking.travelDate);
+    const hoursUntilTravel =
+      (travelDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    // Check if cancellation is allowed based on policy
+    // Parse cancellation policy from string (since it's stored as String in DB)
+    const policyText = booking.TouristPackage?.cancellationPolicy || '';
+    let canCancel = true;
+    let refundPercentage = 0;
+    let policyType = 'FLEXIBLE'; // default
+
+    // Determine policy type from text (simplified logic)
+    if (
+      policyText.toLowerCase().includes('non-refundable') ||
+      policyText.toLowerCase().includes('no refund')
+    ) {
+      policyType = 'NON_REFUNDABLE';
+    } else if (
+      policyText.toLowerCase().includes('strict') ||
+      policyText.toLowerCase().includes('7 days')
+    ) {
+      policyType = 'STRICT';
+    } else if (
+      policyText.toLowerCase().includes('moderate') ||
+      policyText.toLowerCase().includes('5 days')
+    ) {
+      policyType = 'MODERATE';
+    } else if (
+      policyText.toLowerCase().includes('flexible') ||
+      policyText.toLowerCase().includes('24')
+    ) {
+      policyType = 'FLEXIBLE';
+    }
+
+    switch (policyType) {
+      case 'FLEXIBLE':
+        // Can cancel up to 24 hours before
+        if (hoursUntilTravel < 24) {
+          canCancel = false;
+        } else {
+          refundPercentage = 100;
+        }
+        break;
+
+      case 'MODERATE':
+        // Can cancel up to 5 days before
+        if (hoursUntilTravel < 120) {
+          // 5 days = 120 hours
+          canCancel = false;
+        } else if (hoursUntilTravel >= 120) {
+          refundPercentage = 100;
+        }
+        break;
+
+      case 'STRICT':
+        // Can cancel up to 7 days before with 50% refund
+        if (hoursUntilTravel < 168) {
+          // 7 days = 168 hours
+          canCancel = false;
+        } else {
+          refundPercentage = 50;
+        }
+        break;
+
+      case 'NON_REFUNDABLE':
+        canCancel = false;
+        refundPercentage = 0;
+        break;
+
+      default:
+        // Default to flexible
+        canCancel = hoursUntilTravel >= 24;
+        refundPercentage = canCancel ? 100 : 0;
+    }
+
+    if (!canCancel) {
+      throw new ConflictException(
+        `Cannot cancel booking. Cancellation policy (${policyType}) does not allow cancellation at this time.`,
+      );
+    }
+
+    // Update booking status to CANCELLED
+    const updatedBooking = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: 'CANCELLED',
+      },
+      include: {
+        TouristPackage: {
+          select: {
+            id: true,
+            name: true,
+            TourismCompany: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        Currency: true,
+      },
+    });
+
+    // TODO: If payment was approved, initiate refund process
+    // This would involve calling Mercado Pago API to process refund
+    if (booking.paymentStatus === 'APPROVED' && booking.paymentId) {
+      // Log for now - implement actual refund later
+      console.log(
+        `Refund needed for booking ${bookingId}: ${refundPercentage}% of ${booking.totalAmount}`,
+      );
+      // TODO: Call Mercado Pago refund API
+      // const refundAmount = booking.totalAmount * (refundPercentage / 100);
+      // await this.processRefund(booking.paymentId, refundAmount);
+    }
+
+    return {
+      ...updatedBooking,
+      cancellationDetails: {
+        cancelledAt: new Date(),
+        reason: cancelDto.reason,
+        refundPercentage,
+        refundStatus: booking.paymentStatus === 'APPROVED' ? 'PENDING' : 'N/A',
+      },
+    };
   }
 }

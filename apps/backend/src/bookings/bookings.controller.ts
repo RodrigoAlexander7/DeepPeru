@@ -6,10 +6,12 @@ import {
   Get,
   Query,
   Param,
+  Patch,
 } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
+import { CancelBookingDto } from './dto/cancel-booking.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.interface';
@@ -175,6 +177,70 @@ export class BookingsController {
   })
   findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.bookingsService.findOneByUser(id, user.userId);
+  }
+
+  @Patch(':id/cancel')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiParam({
+    name: 'id',
+    description: 'Booking ID to cancel',
+    example: 'clxyz123abc',
+  })
+  @ApiOperation({
+    summary: 'Cancel a booking',
+    description:
+      'Cancels a booking based on the cancellation policy. Validates that the booking belongs to the authenticated user and that it can be cancelled according to the policy type and time remaining until travel date. Initiates refund process if payment was already processed.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Booking cancelled successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        status: { type: 'string', example: 'CANCELLED' },
+        TouristPackage: { type: 'object' },
+        Currency: { type: 'object' },
+        cancellationDetails: {
+          type: 'object',
+          properties: {
+            cancelledAt: { type: 'string', format: 'date-time' },
+            reason: { type: 'string', nullable: true },
+            refundPercentage: { type: 'number', example: 100 },
+            refundStatus: {
+              type: 'string',
+              enum: ['PENDING', 'N/A'],
+              description: 'PENDING if payment was approved, N/A otherwise',
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Booking does not belong to user',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Booking not found',
+  })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Conflict - Booking is already cancelled, completed, or cannot be cancelled due to policy',
+  })
+  cancelBooking(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() cancelDto: CancelBookingDto,
+  ) {
+    return this.bookingsService.cancelBooking(id, user.userId, cancelDto);
   }
 
   @Post()
