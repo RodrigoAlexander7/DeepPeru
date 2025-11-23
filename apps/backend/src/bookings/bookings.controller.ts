@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Get, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Get,
+  Query,
+  Param,
+} from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
@@ -11,6 +19,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 
 @ApiTags('Bookings')
@@ -79,6 +88,93 @@ export class BookingsController {
     @Query() queryDto: QueryBookingsDto,
   ) {
     return this.bookingsService.findAllByUser(user.userId, queryDto);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiParam({
+    name: 'id',
+    description: 'Booking ID',
+    example: 'clxyz123abc',
+  })
+  @ApiOperation({
+    summary: 'Get a single booking by ID',
+    description:
+      'Retrieves complete details of a specific booking including tourist package, company, activities, and user information. Only returns bookings that belong to the authenticated user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Booking retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        userId: { type: 'string' },
+        packageId: { type: 'number' },
+        pricingOptionId: { type: 'number', nullable: true },
+        paymentId: { type: 'string', nullable: true },
+        paymentStatus: {
+          type: 'string',
+          enum: [
+            'PENDING',
+            'APPROVED',
+            'AUTHORIZED',
+            'IN_PROCESS',
+            'IN_MEDIATION',
+            'REJECTED',
+            'CANCELLED',
+            'REFUNDED',
+            'CHARGED_BACK',
+          ],
+        },
+        currencyId: { type: 'number' },
+        totalAmount: { type: 'number' },
+        commissionPercentage: { type: 'number' },
+        commissionAmount: { type: 'number' },
+        companyAmount: { type: 'number' },
+        bookingDate: { type: 'string', format: 'date-time' },
+        travelDate: { type: 'string', format: 'date-time' },
+        numberOfParticipants: { type: 'number' },
+        status: {
+          type: 'string',
+          enum: ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'],
+        },
+        TouristPackage: {
+          type: 'object',
+          description:
+            'Complete tourist package details with company and activities',
+        },
+        PricingOption: {
+          type: 'object',
+          nullable: true,
+          description: 'Selected pricing option',
+        },
+        Currency: {
+          type: 'object',
+          description: 'Currency information',
+        },
+        User: {
+          type: 'object',
+          description: 'User information',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Booking does not belong to user',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Booking not found',
+  })
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.bookingsService.findOneByUser(id, user.userId);
   }
 
   @Post()

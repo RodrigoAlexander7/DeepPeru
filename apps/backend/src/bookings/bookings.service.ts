@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -143,5 +144,97 @@ export class BookingsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  /**
+   * Find a single booking by ID for a specific user
+   * @param bookingId - Booking ID
+   * @param userId - User ID
+   * @returns Booking with complete related data
+   * @throws NotFoundException if booking doesn't exist
+   * @throws ForbiddenException if booking doesn't belong to user
+   */
+  async findOneByUser(bookingId: string, userId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        TouristPackage: {
+          include: {
+            TourismCompany: {
+              select: {
+                id: true,
+                name: true,
+                legalName: true,
+                email: true,
+                phone: true,
+                websiteUrl: true,
+                logoUrl: true,
+              },
+            },
+            Media: {
+              orderBy: { order: 'asc' },
+            },
+            activities: {
+              include: {
+                Activity: {
+                  include: {
+                    Feature: true,
+                    Schedule: true,
+                  },
+                },
+              },
+            },
+            PricingOption: true,
+            locations: {
+              include: {
+                City: {
+                  include: {
+                    region: {
+                      include: {
+                        country: true,
+                      },
+                    },
+                  },
+                },
+              },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+        PricingOption: true,
+        Currency: true,
+        User: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: {
+              select: {
+                number: true,
+                country: {
+                  select: {
+                    name: true,
+                    code: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    // Validate ownership
+    if (booking.userId !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to view this booking',
+      );
+    }
+
+    return booking;
   }
 }
