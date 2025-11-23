@@ -122,14 +122,14 @@ export class AuthController {
       );
 
       res.redirect(
-        `${frontendUrl}/company/${companyId}/settings?mpConnected=true&mpUserId=${result.mercadoPagoUserId}`,
+        `${frontendUrl}/become-operator?step=3&companyId=${companyId}&mp_status=success&mpUserId=${result.mercadoPagoUserId}`,
       );
     } catch (error: unknown) {
       console.error('Error during Mercado Pago auth callback:', error);
       let message = 'Unknown error';
       if (error instanceof Error) message = error.message;
       res.redirect(
-        `${frontendUrl}/company/${companyId}/settings?mpError=${encodeURIComponent(message)}`,
+        `${frontendUrl}/become-operator?step=3&companyId=${companyId}&mp_status=error&mp_error=${encodeURIComponent(message)}`,
       );
     }
   }
