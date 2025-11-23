@@ -11,6 +11,7 @@ import { TouristPackagesModule } from './tourist-packages/tourist-packages.modul
 import { ActivitiesModule } from './activities/activities.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { PaymentsModule } from './payments/payments.module';
+import { CurrenciesModule } from './currencies/currencies.module';
 
 @Module({
   // Imports are allways modules, not services
@@ -30,6 +31,7 @@ import { PaymentsModule } from './payments/payments.module';
     ActivitiesModule,
     BookingsModule,
     PaymentsModule,
+    CurrenciesModule,
   ],
   controllers: [AppController],
   // Services by the module it self (no from other module)
