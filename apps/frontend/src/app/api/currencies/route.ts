@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import axios from 'axios';
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -8,15 +9,9 @@ const BACKEND_URL =
 export async function GET() {
   try {
     // Consultar el backend para obtener el mapa de currencies
-    const response = await fetch(`${BACKEND_URL}/currencies/map`);
+    const response = await axios.get(`${BACKEND_URL}/currencies/map`);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch currency map from backend');
-    }
-
-    const currencyMap = await response.json();
-
-    return NextResponse.json(currencyMap);
+    return NextResponse.json(response.data);
   } catch (error: any) {
     console.error('Error getting currencies:', error);
 

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+import { getAuthApi } from '@/lib/apiAuth';
 
 /**
  * GET /api/users/me
@@ -10,35 +7,19 @@ const BACKEND_URL =
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('access_token');
+    const api = await getAuthApi();
 
-    if (!accessToken) {
-      return NextResponse.json({ message: 'No autenticado' }, { status: 401 });
-    }
+    const response = await api.get('/users/me');
 
-    const response = await fetch(`${BACKEND_URL}/users/me`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken.value}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: 'Error desconocido' }));
-      return NextResponse.json(errorData, { status: response.status });
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
+    return NextResponse.json(response.data);
+  } catch (error: any) {
     console.error('Error fetching user profile:', error);
     return NextResponse.json(
-      { message: 'Error al obtener el perfil' },
-      { status: 500 },
+      {
+        message: error.response?.data?.message || 'Error al obtener el perfil',
+        error: error.message,
+      },
+      { status: error.response?.status || 500 },
     );
   }
 }
@@ -49,38 +30,21 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('access_token');
-
-    if (!accessToken) {
-      return NextResponse.json({ message: 'No autenticado' }, { status: 401 });
-    }
-
+    const api = await getAuthApi();
     const body = await request.json();
 
-    const response = await fetch(`${BACKEND_URL}/users/me`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${accessToken.value}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const response = await api.patch('/users/me', body);
 
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: 'Error desconocido' }));
-      return NextResponse.json(errorData, { status: response.status });
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
+    return NextResponse.json(response.data);
+  } catch (error: any) {
     console.error('Error updating user profile:', error);
     return NextResponse.json(
-      { message: 'Error al actualizar el perfil' },
-      { status: 500 },
+      {
+        message:
+          error.response?.data?.message || 'Error al actualizar el perfil',
+        error: error.message,
+      },
+      { status: error.response?.status || 500 },
     );
   }
 }
