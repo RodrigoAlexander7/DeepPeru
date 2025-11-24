@@ -43,10 +43,12 @@ RUN pnpm install --prod --ignore-scripts
 COPY --from=builder /app/apps/backend/dist ./dist
 COPY --from=builder /app/apps/backend/prisma ./prisma
 
-# 4. SOLUCIÓN: Instalamos la versión EXACTA de Prisma (6.18.0) para regenerar el cliente
-# Esto evita que se descargue la v7.0.0 que rompe tu esquema
+# 4. SOLUCIÓN: 
+# A) Instalamos Prisma 6.18.0 (Versión correcta)
+# B) Ejecutamos generate con el flag "--generator client". 
+#    Esto fuerza a ignorar "prisma-docs-generator" u otros plugins dev.
 RUN npm install -g prisma@6.18.0 && \
-   npx prisma generate && \
+   npx prisma generate --generator client && \
    npm uninstall -g prisma
 
 EXPOSE 4000
