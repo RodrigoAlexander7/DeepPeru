@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:22 AS builder
 WORKDIR /app
 
 # Copiamos archivos de workspace y lock
@@ -26,7 +26,7 @@ RUN cd apps/backend && pnpm run build
 # -----------------------
 # STAGE 2: Runtime
 # -----------------------
-FROM node:22-alpine AS runtime
+FROM node:22 AS runtime
 WORKDIR /app
 
 # Instalar pnpm
