@@ -43,7 +43,6 @@ COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
 
 WORKDIR /app/apps/backend
-RUN npx prisma generate
 
 EXPOSE 4000
 
