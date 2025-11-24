@@ -18,7 +18,7 @@ RUN pnpm install --filter ./apps/backend...
 # Copiar todo el repo
 COPY . .
 
-# Generar prisma client (para que el build de NestJS no falle por tipos faltantes)
+# Generar prisma client
 RUN cd apps/backend && npx prisma generate
 
 # Build del backend
@@ -37,18 +37,15 @@ RUN npm install -g pnpm
 COPY apps/backend/package.json ./
 
 # 2. Instalamos dependencias de producción
-# Esto baja @prisma/client (vacío/ligero)
 RUN pnpm install --prod --ignore-scripts
 
 # 3. Copiamos el código compilado (dist) y el esquema Prisma
 COPY --from=builder /app/apps/backend/dist ./dist
 COPY --from=builder /app/apps/backend/prisma ./prisma
 
-# 4. SOLUCIÓN CLAVE: Regenerar Prisma en Runtime
-# En lugar de copiar archivos complejos de pnpm, instalamos el CLI temporalmente,
-# generamos el cliente en el entorno final y borramos el CLI.
-# Esto garantiza que el binario sea correcto para el sistema (Debian) y la ruta sea la correcta.
-RUN npm install -g prisma && \
+# 4. SOLUCIÓN: Instalamos la versión EXACTA de Prisma (6.18.0) para regenerar el cliente
+# Esto evita que se descargue la v7.0.0 que rompe tu esquema
+RUN npm install -g prisma@6.18.0 && \
    npx prisma generate && \
    npm uninstall -g prisma
 
