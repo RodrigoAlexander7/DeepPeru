@@ -1,37 +1,29 @@
-# Select the image for node
 FROM node:22-alpine
 
-# Create app/ on the container
 WORKDIR /app
 
-# Copy package.json and package-lock.json to the container
-COPY package*.json ./
+# Copiamos sólo los archivos del workspace necesarios para resolver deps y aprovechar cache
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY tsconfig*.json ./
-COPY pnpm-workspace.yaml ./
-COPY pnpm-lock.yaml ./
 
-# Copy the backend package.json to apps/backend on the container
-COPY apps/backend/package.json apps/backend
+# Aseguramos que exista la carpeta destino y copiamos el package.json del backend
+RUN mkdir -p apps/backend
+COPY apps/backend/package.json apps/backend/package.json
 
-# Install pnpm globally
+# Instalamos pnpm y las deps (sólo las del backend usando el workspace)
 RUN npm install -g pnpm
-
-# Install dependencies using pnpm -> This isntall only the backend dependencies
-# <...> means include also transitive dependencies -> so install monorepo dep. and back dependencies
 RUN pnpm install --filter ./apps/backend...
 
-# Copy the rest of the application code to the container
-# we copi all cause we need root files like linter etc (i hate u alvaro lol)
-COPY . . 
+# Ahora copiamos el resto del repo
+COPY . .
 
-# Say: now /app/apps/backend is the current direcotory (is like cd) 
 WORKDIR /app/apps/backend
+
+# Prisma: generar client antes del build
 RUN npx prisma generate
 
+# Build y run
 RUN pnpm run build
 
 EXPOSE 4000
 CMD ["pnpm", "start:prod"]
-
-
-
