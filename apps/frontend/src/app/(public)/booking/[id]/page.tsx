@@ -117,12 +117,15 @@ export default function BookingPage() {
 
         // Si se pasaron parámetros de precio en la URL, usarlos
         if (pricePerUnit && totalPrice) {
+          const currId =
+            pricingOption?.currencyId || (currency === 'PEN' ? 7 : 6);
           setSelectedPricing({
             id: pricingOption?.id || null, // Usar el ID validado del paquete, no el de la URL
             name: pricingName,
             pricePerUnit: Number(pricePerUnit),
             totalPrice: Number(totalPrice),
             currency: currency,
+            currencyId: currId,
             perPerson: perPerson,
             participants: participants ? Number(participants) : 1,
             minParticipants: pricingOption?.minParticipants || null,
@@ -141,7 +144,8 @@ export default function BookingPage() {
             name: pricingOption.name,
             pricePerUnit: basePrice,
             totalPrice: calculatedTotal,
-            currency: pricingOption.currencyId === 2 ? 'PEN' : 'USD',
+            currency: pricingOption.currencyId === 7 ? 'PEN' : 'USD',
+            currencyId: pricingOption.currencyId,
             perPerson: pricingOption.perPerson,
             participants: baseParticipants,
             minParticipants: pricingOption.minParticipants || null,
@@ -259,69 +263,115 @@ export default function BookingPage() {
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (paymentData?: any) => {
     if (!currentUser || !packageData || !selectedPricing) {
       alert('Falta información necesaria para completar la reserva');
       return;
     }
 
-    // Validar que se haya seleccionado una fecha
+    // Validar que haya fecha seleccionada
     if (!formData.date) {
-      alert('Por favor selecciona una fecha de viaje');
+      alert('Por favor selecciona una fecha para el tour');
+      setStep(2);
       return;
     }
-
-    // Validar que tengamos el currency map cargado
-    if (Object.keys(currencyMap).length === 0) {
-      alert('Cargando información de monedas, por favor espera...');
-      return;
-    }
-
-    // Determinar currencyId basado en el código de moneda
-    // Usar el currencyMap dinámico cargado desde el backend
-    const currencyCode =
-      selectedPricing.currency === 'S/' ? 'PEN' : selectedPricing.currency;
-    const currencyId = currencyMap[currencyCode] || currencyMap['USD'];
-
-    if (!currencyId) {
-      alert(
-        'Error: No se pudo determinar la moneda. Por favor intenta de nuevo.',
-      );
-      return;
-    }
-
-    const bookingData: any = {
-      packageId: Number(packageData.id),
-      travelDate: formData.date, // Fecha en formato ISO (YYYY-MM-DD)
-      numberOfParticipants: formData.travelers.length,
-      currencyId: currencyId,
-    };
-
-    // Solo agregar pricingOptionId si existe y es un número válido
-    if (selectedPricing.id && typeof selectedPricing.id === 'number') {
-      bookingData.pricingOptionId = Number(selectedPricing.id);
-    }
-
-    console.log('Enviando reserva al backend:', bookingData);
-    console.log('Selected pricing:', selectedPricing);
-    console.log('Package pricing options:', packageData.PricingOption);
-    console.log('Currency map:', currencyMap);
-    console.log('Currency code:', currencyCode, '-> ID:', currencyId);
 
     try {
-      const result = await bookingService.createBooking(bookingData);
+      // Preparar fecha en formato ISO 8601
+      const travelDate = new Date(formData.date).toISOString();
 
-      console.log('Resultado de la reserva:', result);
-      alert('¡Reserva completada exitosamente!');
+      // Preparar travelers sin el campo id
+      const cleanTravelers = formData.travelers.map(
+        ({ firstName, lastName }) => ({
+          firstName,
+          lastName,
+        }),
+      );
 
-      // Redirigir al dashboard para ver la reserva
-      router.push('/dashboard');
-    } catch (error: any) {
-      console.error('Error completo al enviar la reserva:', error);
-      const errorMessage =
-        error.message ||
-        'Hubo un error al procesar tu reserva. Por favor intenta de nuevo.';
-      alert(`Error: ${errorMessage}`);
+      // Crear el booking primero
+      const bookingResponse = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          packageId: packageData.id,
+          pricingOptionId: selectedPricing.id,
+          travelDate: travelDate,
+          numberOfParticipants: formData.travelers.length,
+          currencyId:
+            selectedPricing.currencyId ||
+            (selectedPricing.currency === 'PEN' ? 7 : 6),
+          contactInfo: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            countryCode: formData.countryCode,
+          },
+          activityDetails: {
+            date: formData.date,
+            time: formData.time || '08:00',
+            travelers: cleanTravelers,
+            pickupLocation: formData.pickupLocation || '',
+            tourLanguage: formData.tourLanguage || 'Español',
+          },
+        }),
+      });
+
+      if (!bookingResponse.ok) {
+        const error = await bookingResponse.json();
+        throw new Error(error.message || 'Error al crear la reserva');
+      }
+
+      const bookingResult = await bookingResponse.json();
+      const bookingId = bookingResult.bookingId || bookingResult.booking?.id;
+
+      if (!bookingId) {
+        throw new Error('No se pudo obtener el ID de la reserva');
+      }
+
+      // Si hay datos de pago, procesar el pago
+      if (paymentData && formData.paymentOption === 'now') {
+        const paymentResponse = await fetch('/api/payments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            bookingId,
+            ...paymentData,
+          }),
+        });
+
+        if (!paymentResponse.ok) {
+          const error = await paymentResponse.json();
+          throw new Error(error.message || 'Error al procesar el pago');
+        }
+
+        const paymentResult = await paymentResponse.json();
+
+        if (paymentResult.status === 'success') {
+          alert('¡Pago completado exitosamente!');
+          router.push(`/booking/confirmation/${bookingId}`);
+        } else {
+          alert(
+            `El pago fue ${paymentResult.status}. Por favor verifica con el soporte.`,
+          );
+          router.push(`/booking/status/${bookingId}`);
+        }
+      } else {
+        // Sin pago inmediato
+        alert('¡Reserva creada exitosamente!');
+        router.push(`/booking/confirmation/${bookingId}`);
+      }
+    } catch (error) {
+      console.error('Error al procesar la reserva:', error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Hubo un error al procesar tu reserva. Por favor intenta de nuevo.',
+      );
     }
   };
 

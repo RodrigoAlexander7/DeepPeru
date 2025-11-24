@@ -255,6 +255,34 @@ export default function ActivityDetails({
           </div>
         )}
 
+        {/* FECHA DEL TOUR */}
+        <div className="mb-6">
+          <label className="block mb-1 text-sm font-medium text-gray-700">
+            Fecha de llegada <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="date"
+            required
+            value={formData.date}
+            onChange={(e) => onUpdate({ date: e.target.value })}
+            min={new Date().toISOString().split('T')[0]}
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:ring-red-500 focus:border-red-500"
+          />
+        </div>
+
+        {/* HORA DEL TOUR */}
+        <div className="mb-6">
+          <label className="block mb-1 text-sm font-medium text-gray-700">
+            Hora de recogida
+          </label>
+          <input
+            type="time"
+            value={formData.time}
+            onChange={(e) => onUpdate({ time: e.target.value })}
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:ring-red-500 focus:border-red-500"
+          />
+        </div>
+
         {/* UBICACIÓN DE RECOGIDA */}
         {pickupLocations.length > 0 && (
           <div className="mb-6">

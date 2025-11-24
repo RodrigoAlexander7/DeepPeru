@@ -637,4 +637,31 @@ export class CompaniesService {
     const permissions = await this.getUserCompanyPermissions(userId, companyId);
     return permissions.includes(permissionName);
   }
+
+  async getMercadoPagoPublicKey(companyId: number) {
+    const company = await this.prisma.tourismCompany.findUnique({
+      where: { id: companyId },
+      select: {
+        id: true,
+        name: true,
+        mercadoPagoPublicKey: true,
+      },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+
+    if (!company.mercadoPagoPublicKey) {
+      throw new NotFoundException(
+        'Company has not connected their MercadoPago account',
+      );
+    }
+
+    return {
+      companyId: company.id,
+      companyName: company.name,
+      publicKey: company.mercadoPagoPublicKey,
+    };
+  }
 }

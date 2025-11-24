@@ -165,6 +165,14 @@ model TourismCompany {
   registerDate       DateTime
   /// Mercado Pago Account ID for split payments
   mercadoPagoAccountId String?
+  /// Mercado Pago OAuth access token for white-label payments
+  mercadoPagoAccessToken String?
+  /// Mercado Pago OAuth refresh token
+  mercadoPagoRefreshToken String?
+  /// Token expiration timestamp
+  mercadoPagoTokenExpiresAt DateTime?
+  /// Mercado Pago Public Key for frontend card tokenization
+  mercadoPagoPublicKey String?
   /// Whether the company is active in the system
   isActive           Boolean                     @default(true)
   /// Average rating from users or agencies

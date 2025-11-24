@@ -28,7 +28,7 @@ export default function OperatorForm({
     firstName: '',
     lastName: '',
     dateOfBirth: '',
-    nationalityId: 1, // Perú por defecto
+    nationalityId: 6, // Peru por defecto (id 6 en la BD)
     documentNumber: '',
     ...initialData,
   });
@@ -37,19 +37,33 @@ export default function OperatorForm({
     Partial<Record<keyof CompanyAdminData, string>>
   >({});
   const [countries, setCountries] = useState<
-    Array<{ id: number; name: string }>
+    Array<{ id: number; name: string; code: string }>
   >([]);
+  const [loadingCountries, setLoadingCountries] = useState(true);
 
   useEffect(() => {
-    // Cargar países (simulado - ajustar según tu API)
-    setCountries([
-      { id: 1, name: 'Perú' },
-      { id: 2, name: 'Colombia' },
-      { id: 3, name: 'Chile' },
-      { id: 4, name: 'Argentina' },
-      { id: 5, name: 'México' },
-    ]);
-  }, []);
+    // Por ahora usar países hardcoded con IDs reales de la BD
+    // TODO: Crear endpoint GET /countries en el backend
+    const countriesData = [
+      { id: 6, name: 'Perú', code: 'PE' },
+      { id: 7, name: 'United States', code: 'US' },
+      { id: 8, name: 'Brazil', code: 'BR' },
+      { id: 9, name: 'Argentina', code: 'AR' },
+      { id: 10, name: 'Chile', code: 'CL' },
+    ];
+
+    setCountries(countriesData);
+
+    // Si no hay initialData.nationalityId, establecer Peru como default
+    if (!initialData?.nationalityId) {
+      const peru = countriesData.find((c) => c.code === 'PE');
+      if (peru) {
+        setFormData((prev) => ({ ...prev, nationalityId: peru.id }));
+      }
+    }
+
+    setLoadingCountries(false);
+  }, [initialData]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,

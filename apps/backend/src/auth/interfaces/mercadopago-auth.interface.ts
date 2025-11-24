@@ -3,6 +3,7 @@ import { Request } from 'express';
 export interface MercadoPagoTokens {
   accessToken: string;
   refreshToken: string;
+  companyId: number;
 }
 
 export interface MercadoPagoAuthRequest extends Request {
