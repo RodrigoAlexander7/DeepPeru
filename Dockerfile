@@ -37,13 +37,13 @@ COPY apps/backend/package.json ./apps/backend/
 
 # Solo produciton deps + sin scripts (evita husky)
 RUN pnpm install --prod --filter ./apps/backend... --ignore-scripts
-RUN npx prisma generate
 
 # Copiamos los artefactos del builder
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
 
 WORKDIR /app/apps/backend
+RUN npx prisma generate
 
 EXPOSE 4000
 
