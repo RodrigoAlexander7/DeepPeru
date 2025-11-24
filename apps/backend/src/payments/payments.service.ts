@@ -54,10 +54,9 @@ export class PaymentsService {
       const paymentBody: PaymentRequestWithSplit = {
         transaction_amount: Number(booking.totalAmount),
         token: token,
-        description: `Booking #${booking.id}`,
+        description: `Booking #${booking.id} - ${touristPackage.name}`,
         installments: installments,
         payment_method_id: paymentMethodId,
-        issuer_id: Number(issuerId),
         payer: {
           email: payer.email,
           identification: {
@@ -67,13 +66,21 @@ export class PaymentsService {
         },
       };
 
-      // If seller has a connected account, configure split payment
+      // Solo agregar issuer_id si existe y es válido
+      if (issuerId && issuerId !== '') {
+        const issuerNumber = Number(issuerId);
+        if (!isNaN(issuerNumber) && issuerNumber > 0) {
+          paymentBody.issuer_id = issuerNumber;
+        }
+      }
+
+      // Split payment: application_fee es la comisión de la plataforma
+      // El resto va automáticamente al vendedor (sellerAccountId)
       if (sellerAccountId) {
         paymentBody.application_fee = commissionAmount;
-        paymentBody.transfer_data = {
-          destination_account_id: sellerAccountId,
-        };
       }
+
+      console.log('Payment body:', JSON.stringify(paymentBody, null, 2));
 
       const result = await payment.create({ body: paymentBody });
 
@@ -109,7 +116,7 @@ export class PaymentsService {
         return { status: result?.status, detail: result?.status_detail };
       }
     } catch (error) {
-      console.error(error);
+      console.error('Payment error:', error);
       throw new BadRequestException(
         'Payment failed: ' +
           (error instanceof Error ? error.message : 'Unknown error'),

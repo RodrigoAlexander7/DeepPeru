@@ -96,12 +96,15 @@ export default function BookingPage() {
 
         // Si se pasaron parámetros de precio en la URL, usarlos
         if (pricePerUnit && totalPrice) {
+          const currId =
+            pricingOption?.currencyId || (currency === 'PEN' ? 7 : 6);
           setSelectedPricing({
             id: pricingOptionId ? Number(pricingOptionId) : null,
             name: pricingName,
             pricePerUnit: Number(pricePerUnit),
             totalPrice: Number(totalPrice),
             currency: currency,
+            currencyId: currId,
             perPerson: perPerson,
             participants: participants ? Number(participants) : 1,
             minParticipants: pricingOption?.minParticipants || null,
@@ -120,7 +123,8 @@ export default function BookingPage() {
             name: pricingOption.name,
             pricePerUnit: basePrice,
             totalPrice: calculatedTotal,
-            currency: pricingOption.currencyId === 2 ? 'PEN' : 'USD',
+            currency: pricingOption.currencyId === 7 ? 'PEN' : 'USD',
+            currencyId: pricingOption.currencyId,
             perPerson: pricingOption.perPerson,
             participants: baseParticipants,
             minParticipants: pricingOption.minParticipants || null,
@@ -238,78 +242,114 @@ export default function BookingPage() {
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (paymentData?: any) => {
     if (!currentUser || !packageData || !selectedPricing) {
       alert('Falta información necesaria para completar la reserva');
       return;
     }
 
-    const bookingData = {
-      // IDs necesarios
-      userId: currentUser.id,
-      packageId: packageData.id,
-      pricingOptionId: selectedPricing.id,
-
-      // Datos del formulario
-      contactInfo: {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        countryCode: formData.countryCode,
-      },
-
-      // Detalles de la actividad
-      activityDetails: {
-        date: formData.date,
-        time: formData.time,
-        travelers: formData.travelers,
-        pickupLocation: formData.pickupLocation,
-        tourLanguage: formData.tourLanguage,
-      },
-
-      // Detalles de pago
-      paymentDetails: {
-        paymentOption: formData.paymentOption,
-        promoCode: formData.promoCode,
-        totalPrice: currentTotalPrice,
-        currency: selectedPricing.currency,
-      },
-
-      // Información adicional
-      preferences: {
-        receiveTextUpdates: formData.receiveTextUpdates,
-        receiveEmailOffers: formData.receiveEmailOffers,
-      },
-    };
-
-    console.log('Enviando reserva al backend:', bookingData);
+    // Validar que haya fecha seleccionada
+    if (!formData.date) {
+      alert('Por favor selecciona una fecha para el tour');
+      setStep(2);
+      return;
+    }
 
     try {
-      /* Aquí harías el POST a tu backend
-      const response = await fetch('/api/bookings', {
+      // Preparar fecha en formato ISO 8601
+      const travelDate = new Date(formData.date).toISOString();
+
+      // Preparar travelers sin el campo id
+      const cleanTravelers = formData.travelers.map(
+        ({ firstName, lastName }) => ({
+          firstName,
+          lastName,
+        }),
+      );
+
+      // Crear el booking primero
+      const bookingResponse = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(bookingData),
+        body: JSON.stringify({
+          packageId: packageData.id,
+          pricingOptionId: selectedPricing.id,
+          travelDate: travelDate,
+          numberOfParticipants: formData.travelers.length,
+          currencyId:
+            selectedPricing.currencyId ||
+            (selectedPricing.currency === 'PEN' ? 7 : 6),
+          contactInfo: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+            countryCode: formData.countryCode,
+          },
+          activityDetails: {
+            date: formData.date,
+            time: formData.time || '08:00',
+            travelers: cleanTravelers,
+            pickupLocation: formData.pickupLocation || '',
+            tourLanguage: formData.tourLanguage || 'Español',
+          },
+        }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        alert('¡Reserva completada exitosamente!');
-        console.log('Resultado de la reserva:', result);
+      if (!bookingResponse.ok) {
+        const error = await bookingResponse.json();
+        throw new Error(error.message || 'Error al crear la reserva');
+      }
 
-        // Redirigir a página de confirmación
-        router.push(`/booking/confirmation/${result.bookingId}`);
+      const bookingResult = await bookingResponse.json();
+      const bookingId = bookingResult.bookingId || bookingResult.booking?.id;
+
+      if (!bookingId) {
+        throw new Error('No se pudo obtener el ID de la reserva');
+      }
+
+      // Si hay datos de pago, procesar el pago
+      if (paymentData && formData.paymentOption === 'now') {
+        const paymentResponse = await fetch('/api/payments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            bookingId,
+            ...paymentData,
+          }),
+        });
+
+        if (!paymentResponse.ok) {
+          const error = await paymentResponse.json();
+          throw new Error(error.message || 'Error al procesar el pago');
+        }
+
+        const paymentResult = await paymentResponse.json();
+
+        if (paymentResult.status === 'success') {
+          alert('¡Pago completado exitosamente!');
+          router.push(`/booking/confirmation/${bookingId}`);
+        } else {
+          alert(
+            `El pago fue ${paymentResult.status}. Por favor verifica con el soporte.`,
+          );
+          router.push(`/booking/status/${bookingId}`);
+        }
       } else {
-        const error = await response.json();
-        alert(`Error al crear la reserva: ${error.message}`);
-      }*/
+        // Sin pago inmediato
+        alert('¡Reserva creada exitosamente!');
+        router.push(`/booking/confirmation/${bookingId}`);
+      }
     } catch (error) {
-      console.error('Error al enviar la reserva:', error);
+      console.error('Error al procesar la reserva:', error);
       alert(
-        'Hubo un error al procesar tu reserva. Por favor intenta de nuevo.',
+        error instanceof Error
+          ? error.message
+          : 'Hubo un error al procesar tu reserva. Por favor intenta de nuevo.',
       );
     }
   };
