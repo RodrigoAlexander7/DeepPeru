@@ -40,7 +40,7 @@ RUN pnpm install --prod --filter ./apps/backend... --ignore-scripts
 
 # Copiamos los artefactos del builder
 COPY --from=builder /app/apps/backend/dist/src ./apps/backend/dist/src
-COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
+COPY --from=builder /app/apps/backend/generated/prisma ./apps/backend/generated/prisma
 
 WORKDIR /app/apps/backend
 
