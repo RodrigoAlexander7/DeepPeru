@@ -1,52 +1,49 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Copiamos archivos del workspace para aprovechar cache
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+# Copiamos archivos de workspace y lock
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY tsconfig*.json ./
 
-# Aseguramos la carpeta y copiamos package.json del backend
-RUN mkdir -p apps/backend
-COPY apps/backend/package.json apps/backend/package.json
+# Copiamos backend package.json
+COPY apps/backend/package.json apps/backend/
 
-# Instalar pnpm y deps (solo backend usando filter)
+# Instalar pnpm
 RUN npm install -g pnpm
+
+# Instalar TODAS las dependencias necesarias para build
 RUN pnpm install --filter ./apps/backend...
 
-# Copiamos el resto del repo
+# Copiar todo el repo
 COPY . .
 
-WORKDIR /app/apps/backend
+# Generar prisma client
+RUN cd apps/backend && npx prisma generate
 
-# Prisma: generar client (necesario antes del build si importas Prisma)
-RUN npx prisma generate
+# Build del backend
+RUN cd apps/backend && pnpm run build
 
-# Build (asegúrate que el script "build" en apps/backend/package.json compile a /dist)
-RUN pnpm run build
-
-# Verificación explícita: aseguramos que el build generó dist/main.js
-RUN if [ -f dist/main.js ]; then echo "✔ dist/main.js encontrado"; else echo "ERROR: dist/main.js NO existe"; ls -la dist || true; exit 1; fi
-
-# ---------------------------
-# Stage: runtime (producción, más pequeño)
-# ---------------------------
+# -----------------------
+# STAGE 2: Runtime
+# -----------------------
 FROM node:22-alpine AS runtime
 WORKDIR /app
 
-# Copiamos package files necesarios para instalar solo deps de producción
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/backend/package.json apps/backend/package.json
-
-# Instalar pnpm y sólo las dependencias de producción del backend
+# Instalar pnpm
 RUN npm install -g pnpm
-RUN pnpm install --prod --filter ./apps/backend...
 
-# Copiamos únicamente los artefactos de build desde el builder
+# Copiamos package.json del backend
+COPY apps/backend/package.json ./apps/backend/
+
+# Solo produciton deps + sin scripts (evita husky)
+RUN pnpm install --prod --filter ./apps/backend... --ignore-scripts
+
+# Copiamos los artefactos del builder
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
 
 WORKDIR /app/apps/backend
 
 EXPOSE 4000
 
-# Ejecutar el archivo compilado explícitamente
 CMD ["node", "dist/main.js"]
