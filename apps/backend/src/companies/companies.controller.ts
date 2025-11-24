@@ -24,6 +24,7 @@ import { UpdateCompanyDto } from './dto/update-company.dto';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+import { Public } from '@/auth/decorators/public.decorator';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/interfaces/authenticated-user.interface';
 import { Permissions } from './decorators/permissions.decorator';
@@ -249,5 +250,25 @@ export class CompaniesController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.companiesService.getUserPermissions(id, user.userId);
+  }
+
+  @Public()
+  @Get(':id/mercadopago/public-key')
+  @ApiOperation({
+    summary: 'Get company MercadoPago public key',
+    description:
+      'Returns the MercadoPago public key for the company. Used by frontend to tokenize cards.',
+  })
+  @ApiParam({ name: 'id', description: 'Company ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Public key retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Company not found or not connected to MercadoPago',
+  })
+  async getMercadoPagoPublicKey(@Param('id', ParseIntPipe) id: number) {
+    return this.companiesService.getMercadoPagoPublicKey(id);
   }
 }

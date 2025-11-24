@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthService } from '../auth/auth.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { PaymentRequestWithSplit } from './interfaces/payment-request.interface';
@@ -11,13 +12,10 @@ import { PaymentStatus } from '@prisma/client';
 
 @Injectable()
 export class PaymentsService {
-  private client: MercadoPagoConfig;
-
-  constructor(private prisma: PrismaService) {
-    this.client = new MercadoPagoConfig({
-      accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN || '',
-    });
-  }
+  constructor(
+    private prisma: PrismaService,
+    private authService: AuthService,
+  ) {}
 
   async processPayment(createPaymentDto: CreatePaymentDto) {
     const { bookingId, token, paymentMethodId, installments, issuerId, payer } =
@@ -35,7 +33,6 @@ export class PaymentsService {
       throw new BadRequestException('Booking already paid');
     }
 
-    // Fetch company details to get Mercado Pago Account ID
     const touristPackage = await this.prisma.touristPackage.findUnique({
       where: { id: booking.packageId },
       include: { TourismCompany: true },
@@ -45,10 +42,25 @@ export class PaymentsService {
       throw new NotFoundException('Company not found for this booking');
     }
 
-    const sellerAccountId = touristPackage.TourismCompany.mercadoPagoAccountId;
-    const commissionAmount = Number(booking.commissionAmount);
+    const company = touristPackage.TourismCompany;
 
-    const payment = new Payment(this.client);
+    if (!company.mercadoPagoAccessToken) {
+      throw new BadRequestException(
+        'Company has not connected their MercadoPago account',
+      );
+    }
+
+    const accessToken = await this.authService.refreshMercadoPagoToken(
+      company.id,
+    );
+
+    const client = new MercadoPagoConfig({
+      accessToken: accessToken,
+    });
+
+    const commissionAmount = Number(booking.commissionAmount);
+    const companyAmount = Number(booking.companyAmount);
+    const payment = new Payment(client);
 
     try {
       const paymentBody: PaymentRequestWithSplit = {
@@ -64,20 +76,19 @@ export class PaymentsService {
             number: payer.identification.number,
           },
         },
+        metadata: {
+          booking_id: booking.id,
+          company_id: company.id,
+          commission_amount: commissionAmount,
+          company_amount: companyAmount,
+        },
       };
 
-      // Solo agregar issuer_id si existe y es válido
       if (issuerId && issuerId !== '') {
         const issuerNumber = Number(issuerId);
         if (!isNaN(issuerNumber) && issuerNumber > 0) {
           paymentBody.issuer_id = issuerNumber;
         }
-      }
-
-      // Split payment: application_fee es la comisión de la plataforma
-      // El resto va automáticamente al vendedor (sellerAccountId)
-      if (sellerAccountId) {
-        paymentBody.application_fee = commissionAmount;
       }
 
       console.log('Payment body:', JSON.stringify(paymentBody, null, 2));

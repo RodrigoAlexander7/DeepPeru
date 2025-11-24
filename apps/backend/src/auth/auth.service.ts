@@ -44,14 +44,22 @@ export class AuthService {
   }
 
   async callbackOauthMercadoPago(tokens: MercadoPagoTokens, companyId: number) {
-    const { accessToken } = tokens;
+    const { accessToken, refreshToken } = tokens;
 
     const userInfo = await this.fetchMercadoPagoUserInfo(accessToken);
+    const credentials = await this.fetchMercadoPagoCredentials(accessToken);
+
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 6);
 
     await this.prisma.tourismCompany.update({
       where: { id: companyId },
       data: {
         mercadoPagoAccountId: userInfo.id.toString(),
+        mercadoPagoAccessToken: accessToken,
+        mercadoPagoRefreshToken: refreshToken,
+        mercadoPagoTokenExpiresAt: expiresAt,
+        mercadoPagoPublicKey: credentials.public_key,
       },
     });
 
@@ -60,6 +68,75 @@ export class AuthService {
       mercadoPagoUserId: userInfo.id,
       companyId,
     };
+  }
+
+  async refreshMercadoPagoToken(companyId: number): Promise<string> {
+    const company = await this.prisma.tourismCompany.findUnique({
+      where: { id: companyId },
+      select: {
+        mercadoPagoRefreshToken: true,
+        mercadoPagoAccessToken: true,
+        mercadoPagoTokenExpiresAt: true,
+      },
+    });
+
+    if (!company?.mercadoPagoRefreshToken) {
+      throw new UnauthorizedException(
+        'Company has no MercadoPago refresh token',
+      );
+    }
+
+    if (
+      company.mercadoPagoTokenExpiresAt &&
+      company.mercadoPagoTokenExpiresAt > new Date()
+    ) {
+      return company.mercadoPagoAccessToken || '';
+    }
+
+    const clientId = this.configService.get<string>('MERCADO_PAGO_CLIENT_ID');
+    const clientSecret = this.configService.get<string>(
+      'MERCADO_PAGO_CLIENT_SECRET',
+    );
+
+    if (!clientId || !clientSecret) {
+      throw new Error('MercadoPago credentials not configured');
+    }
+
+    const response = await fetch('https://api.mercadopago.com/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        grant_type: 'refresh_token',
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: company.mercadoPagoRefreshToken,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new UnauthorizedException('Failed to refresh MercadoPago token');
+    }
+
+    const data = (await response.json()) as {
+      access_token: string;
+      refresh_token: string;
+    };
+
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 6);
+
+    await this.prisma.tourismCompany.update({
+      where: { id: companyId },
+      data: {
+        mercadoPagoAccessToken: data.access_token,
+        mercadoPagoRefreshToken: data.refresh_token,
+        mercadoPagoTokenExpiresAt: expiresAt,
+      },
+    });
+
+    return data.access_token;
   }
 
   private async fetchMercadoPagoUserInfo(
@@ -74,10 +151,34 @@ export class AuthService {
       throw new UnauthorizedException('Failed to fetch Mercado Pago user info');
 
     const data: unknown = await response.json();
-    // Validación mínima (soft runtime check)
     if (typeof data !== 'object' || data === null || !('id' in data)) {
       throw new Error('Invalid Mercado Pago user info format');
     }
     return data as MercadoPagoUserInfo;
+  }
+
+  private async fetchMercadoPagoCredentials(
+    accessToken: string,
+  ): Promise<{ public_key: string }> {
+    const response = await fetch(
+      'https://api.mercadopago.com/users/me/mercadopago_account/credentials',
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new UnauthorizedException(
+        'Failed to fetch Mercado Pago credentials',
+      );
+    }
+
+    const data: unknown = await response.json();
+    if (typeof data !== 'object' || data === null || !('public_key' in data)) {
+      throw new Error('Invalid Mercado Pago credentials format');
+    }
+    return data as { public_key: string };
   }
 }
