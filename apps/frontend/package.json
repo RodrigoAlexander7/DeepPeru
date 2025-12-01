@@ -1,11 +1,17 @@
 {
-  "name": "@deepperu/frontend",
+  "name": "deepperu-frontend",
   "version": "0.1.0",
+  "description": "DeepPeru Frontend",
   "private": true,
+  "packageManager": "pnpm@10.18.2",
   "scripts": {
     "dev": "next dev -p 4000",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "next lint",
+    "prepare": "cd ../.. && husky || true"
   },
   "dependencies": {
     "axios": "1.12.2",
@@ -18,14 +24,24 @@
     "zustand": "5.0.8"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
     "@tailwindcss/postcss": "4",
     "@types/node": "20",
     "@types/react": "19.2.4",
     "@types/react-dom": "19.2.3",
     "css-loader": "7.1.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.4",
     "mini-css-extract-plugin": "2.9.4",
+    "prettier": "^3.6.2",
     "style-loader": "4.0.0",
     "tailwindcss": "4",
     "typescript": "5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md}": [
+      "prettier --write"
+    ]
   }
 }
