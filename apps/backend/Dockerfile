@@ -12,8 +12,9 @@ RUN pnpm install
 COPY . . 
 
 RUN pnpm prisma generate
+RUN pnpm build
 
-CMD ["pnpm", "run", "dev"]
+CMD ["pnpm", "run", "start:prod"]
 
 
 
