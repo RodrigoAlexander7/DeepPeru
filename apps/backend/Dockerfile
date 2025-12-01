@@ -15,7 +15,3 @@ RUN pnpm prisma generate
 RUN pnpm build
 
 CMD ["pnpm", "run", "start:prod"]
-
-
-
-
