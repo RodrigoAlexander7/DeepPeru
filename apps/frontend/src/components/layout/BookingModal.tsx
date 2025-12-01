@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { BookingRequest } from '@/features/packageDetail/packageService';
-import { packageService } from '@/features/packageDetail/packageService';
+import type { BookingRequest } from '@/features/travel-package-detail/packageService';
+import { packageService } from '@/features/travel-package-detail/packageService';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -87,7 +87,7 @@ export default function BookingModal({
         startDate: formData.startDate,
         endDate: new Date(
           new Date(formData.startDate).getTime() +
-            durationDays * 24 * 60 * 60 * 1000,
+          durationDays * 24 * 60 * 60 * 1000,
         )
           .toISOString()
           .split('T')[0],

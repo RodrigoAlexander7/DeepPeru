@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { api } from '@/lib/apis';
-import CreatePackageStepper from '@/features/packages/components/CreatePackageStepper';
+import CreatePackageStepper from '@/features/travel-packages/components/CreatePackageStepper';
 import type { Company } from '@/types/company';
 
 async function getUserCompaniesServer(): Promise<Company[]> {

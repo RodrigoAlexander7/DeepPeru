@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Header, Footer } from '@/components/layout';
-import { packageService } from '@/features/packageDetail/packageService';
+import { packageService } from '@/features/travel-package-detail/packageService';
 import type { PackageDetail, PricingOption } from '@/types/PackageDetail';
 import type { Activity } from '@/types/Activity';
 import Link from 'next/link';
@@ -443,16 +443,16 @@ export default function PackageDetailPage() {
                         {/* Límites de participantes */}
                         {(option.minParticipants !== null ||
                           option.maxParticipants !== null) && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {option.minParticipants !== null &&
-                              `Mínimo: ${option.minParticipants}`}
-                            {option.minParticipants !== null &&
-                              option.maxParticipants !== null &&
-                              ' • '}
-                            {option.maxParticipants !== null &&
-                              `Máximo: ${option.maxParticipants}`}
-                          </p>
-                        )}
+                            <p className="text-xs text-gray-500 mt-1">
+                              {option.minParticipants !== null &&
+                                `Mínimo: ${option.minParticipants}`}
+                              {option.minParticipants !== null &&
+                                option.maxParticipants !== null &&
+                                ' • '}
+                              {option.maxParticipants !== null &&
+                                `Máximo: ${option.maxParticipants}`}
+                            </p>
+                          )}
                       </div>
                     )}
 
