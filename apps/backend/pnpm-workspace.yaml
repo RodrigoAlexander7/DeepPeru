@@ -1,7 +1,3 @@
-packages:
-  - apps/*
-  - packages/*
-
 onlyBuiltDependencies:
   - '@nestjs/core'
   - '@prisma/client'
@@ -9,5 +5,4 @@ onlyBuiltDependencies:
   - '@scarf/scarf'
   - prisma
   - puppeteer
-  - sharp
   - unrs-resolver
