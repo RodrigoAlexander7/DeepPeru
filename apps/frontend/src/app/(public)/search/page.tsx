@@ -294,10 +294,9 @@ function SearchPageContent() {
                     onClick={() => setCurrentPage(page)}
                     className={`
                       w-10 h-10 rounded-lg font-medium transition-colors
-                      ${
-                        currentPage === page
-                          ? 'bg-red-500 text-white'
-                          : 'hover:bg-gray-200 text-gray-700'
+                      ${currentPage === page
+                        ? 'bg-red-500 text-white'
+                        : 'hover:bg-gray-200 text-gray-700'
                       }
                     `}
                   >
@@ -313,10 +312,9 @@ function SearchPageContent() {
                       onClick={() => setCurrentPage(totalPages)}
                       className={`
                         w-10 h-10 rounded-lg font-medium transition-colors
-                        ${
-                          currentPage === totalPages
-                            ? 'bg-red-500 text-white'
-                            : 'hover:bg-gray-200 text-gray-700'
+                        ${currentPage === totalPages
+                          ? 'bg-red-500 text-white'
+                          : 'hover:bg-gray-200 text-gray-700'
                         }
                       `}
                     >

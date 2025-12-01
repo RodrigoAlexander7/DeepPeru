@@ -230,22 +230,20 @@ function SearchBarContent() {
             <div className="flex border-b border-gray-200">
               <button
                 onClick={() => setActiveTab('exact')}
-                className={`flex-1 px-6 py-3 font-medium transition-colors ${
-                  activeTab === 'exact'
+                className={`flex-1 px-6 py-3 font-medium transition-colors ${activeTab === 'exact'
                     ? 'text-red-500 border-b-2 border-red-500'
                     : 'text-gray-600 hover:text-red-500'
-                }`}
+                  }`}
               >
                 Fechas exactas
               </button>
 
               <button
                 onClick={() => setActiveTab('month')}
-                className={`flex-1 px-6 py-3 font-medium transition-colors ${
-                  activeTab === 'month'
+                className={`flex-1 px-6 py-3 font-medium transition-colors ${activeTab === 'month'
                     ? 'text-red-500 border-b-2 border-red-500'
                     : 'text-gray-600 hover:text-red-500'
-                }`}
+                  }`}
               >
                 Selección por mes
               </button>
@@ -293,11 +291,10 @@ function SearchBarContent() {
                         <button
                           key={i}
                           onClick={() => setSelectedMonth(date)}
-                          className={`w-full py-4 rounded-lg font-medium text-center transition-colors ${
-                            isSelected
+                          className={`w-full py-4 rounded-lg font-medium text-center transition-colors ${isSelected
                               ? 'bg-red-500 text-white'
                               : 'bg-gray-100 text-gray-700 hover:bg-red-500 hover:text-white'
-                          }`}
+                            }`}
                         >
                           {format(date, 'MMMM', { locale: es })}
                         </button>
