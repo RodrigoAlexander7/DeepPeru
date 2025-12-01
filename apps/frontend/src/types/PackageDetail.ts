@@ -73,7 +73,7 @@ export interface PackageDetail {
   Language?: Language;
   // Descripción y meta
   description?: string;
-  durationDays?: number; // en días
+  duration?: number; // en días
   rating?: number;
   difficulty?: string; // EASY, MEDIUM, HARD
 

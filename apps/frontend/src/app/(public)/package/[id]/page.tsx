@@ -105,7 +105,7 @@ export default function PackageDetailPage() {
       totalPrice: String(totalPrice),
       currency: currency,
       perPerson: String(pricingOption.perPerson),
-      durationDays: String(packageData.durationDays ?? 1),
+      durationDays: String(packageData.duration ?? 1),
       description: packageData.description || '',
       image: packageData.Media?.[0]?.url ?? '',
       language: packageData.Language?.name || 'Español',
@@ -166,8 +166,7 @@ export default function PackageDetailPage() {
               {packageData.name}
             </h1>
             <p className="text-xl text-gray-100">
-              {packageData.durationDays} días •{' '}
-              {packageData.Language?.name || 'Español'}
+              {packageData.duration} • {packageData.Language?.name || 'Español'}
             </p>
           </div>
         </div>
@@ -504,7 +503,7 @@ export default function PackageDetailPage() {
                             Duración
                           </p>
                           <p className="text-xs font-bold leading-tight">
-                            {packageData.durationDays ?? 0} días
+                            {packageData.duration ?? 0}
                           </p>
                         </div>
                       </div>

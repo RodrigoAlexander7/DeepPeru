@@ -13,6 +13,12 @@ export default function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [packages, setPackages] = useState<TouristPackage[]>([]);
+  const [sameLocationPackages, setSameLocationPackages] = useState<
+    TouristPackage[]
+  >([]);
+  const [sameDatePackages, setSameDatePackages] = useState<TouristPackage[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -40,10 +46,11 @@ export default function SearchPage() {
     console.log('startIndex:', startIndex);
     console.log('endIndex:', endIndex);
   }, [currentPage, packages]);
+
   const performSearch = async () => {
     setLoading(true);
     try {
-      // Llamar al servicio con los parámetros
+      // Búsqueda principal
       const results = await travelService.searchPackages({
         destination: destination || undefined,
         startDate: startDate || undefined,
@@ -51,15 +58,106 @@ export default function SearchPage() {
         travelers: travelers ? parseInt(travelers) : undefined,
       });
       console.log('RESULTADOS:', results);
-      console.log('Paquetes actuales:', packages);
       setPackages(results.data);
-      setCurrentPage(1); // Reset a primera página
+      setCurrentPage(1);
+
+      // Búsquedas de sugerencias en paralelo
+      if (destination || startDate) {
+        fetchSuggestions();
+      }
     } catch (error) {
       console.error('Error al buscar paquetes:', error);
-      // En producción, mostrarías un toast o mensaje de error
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchSuggestions = async () => {
+    try {
+      // Misma ubicación, diferentes fechas (solo si hay destination)
+      if (destination) {
+        const sameLocationResults = await travelService.searchPackages({
+          destination: destination,
+          // No enviamos startDate ni endDate para obtener todas las fechas
+        });
+        // Filtrar para excluir los paquetes ya mostrados y limitar a 5
+        const filtered = sameLocationResults.data
+          .filter((pkg: TouristPackage) => {
+            // Excluir si tiene las mismas fechas que la búsqueda original
+            if (startDate && endDate) {
+              const pkgDates = getPackageDates(pkg);
+              if (pkgDates) {
+                return (
+                  pkgDates.startDate !== startDate ||
+                  pkgDates.endDate !== endDate
+                );
+              }
+            }
+            return true;
+          })
+          .slice(0, 5);
+        setSameLocationPackages(filtered);
+      }
+
+      // Mismas fechas, diferentes ubicaciones (solo si hay fechas)
+      if (startDate && endDate) {
+        const sameDateResults = await travelService.searchPackages({
+          startDate: startDate,
+          endDate: endDate,
+          // No enviamos destination para obtener todas las ubicaciones
+        });
+        // Filtrar para excluir los paquetes ya mostrados y limitar a 5
+        const filtered = sameDateResults.data
+          .filter((pkg: TouristPackage) => {
+            // Excluir si tiene el mismo destino que la búsqueda original
+            if (destination) {
+              const pkgLocation = getPackageLocation(pkg);
+              return !pkgLocation
+                .toLowerCase()
+                .includes(destination.toLowerCase());
+            }
+            return true;
+          })
+          .slice(0, 5);
+        setSameDatePackages(filtered);
+      }
+    } catch (error) {
+      console.error('Error al buscar sugerencias:', error);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const getPackageImage = (pkg: TouristPackage) => {
+    const primaryMedia = pkg.Media?.find((m) => m.isPrimary);
+    return primaryMedia?.url || pkg.Media?.[0]?.url;
+  };
+
+  const getPackagePrice = (pkg: TouristPackage) => {
+    const pricing = pkg.PricingOption?.[0];
+    return pricing ? parseFloat(pricing.amount) : 0;
+  };
+
+  const getPackageLocation = (pkg: TouristPackage) => {
+    return `${pkg.representativeCity?.name || ''}, ${pkg.representativeCity?.region?.name || ''}`.trim();
+  };
+
+  const getPackageDates = (pkg: TouristPackage) => {
+    const schedule = pkg.Schedule?.[0];
+    if (schedule) {
+      return {
+        startDate: schedule.startDate,
+        endDate: schedule.endDate,
+      };
+    }
+    return null;
   };
 
   return (
@@ -257,147 +355,133 @@ export default function SearchPage() {
       </section>
 
       {/* Sugerencias relacionadas (solo si hay resultados) */}
-      {!loading && packages.length > 0 && (
-        <section className="bg-white py-12 border-t">
-          <div className="container mx-auto px-4">
-            <div className="grid md:grid-cols-2 gap-8">
-              {/* Mismo destino, diferentes fechas */}
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  Same Location, Different Dates
-                </h3>
-                <div className="space-y-4">
-                  {[
-                    {
-                      title: 'Cusco & Sacred Valley',
-                      dates: 'Dec 10 - Dec 15, 2025',
-                      location: 'Cusco, Peru',
-                      price: 1350,
-                      company: 'Inca Trails Peru',
-                    },
-                    {
-                      title: 'Machu Picchu Express',
-                      dates: 'Jan 20 - Jan 25, 2026',
-                      location: 'Cusco, Peru',
-                      price: 1800,
-                      company: 'Peru Adventures',
-                    },
-                    {
-                      title: 'Rainbow Mountain Trek',
-                      dates: 'Feb 5 - Feb 8, 2026',
-                      location: 'Cusco, Peru',
-                      price: 890,
-                      company: 'Andean Explorers',
-                    },
-                  ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors group"
-                      onClick={() => console.log('Navigate to:', item.title)}
-                    >
-                      <div className="w-24 h-24 bg-gradient-to-br from-orange-400 via-pink-400 to-purple-500 rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-900 mb-1 line-clamp-1">
-                          {item.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 mb-1">
-                          {item.company}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+      {!loading &&
+        packages.length > 0 &&
+        (sameLocationPackages.length > 0 || sameDatePackages.length > 0) && (
+          <section className="bg-white py-12 border-t">
+            <div className="container mx-auto px-4">
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* Mismo destino, diferentes fechas */}
+                {sameLocationPackages.length > 0 && (
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                      Mismo lugar, diferentes fechas
+                    </h3>
+                    <div className="space-y-4">
+                      {sameLocationPackages.map((pkg: TouristPackage) => {
+                        const dates = getPackageDates(pkg);
+                        return (
+                          <div
+                            key={pkg.id}
+                            className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors group"
+                            onClick={() => router.push(`/package/${pkg.id}`)}
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            <div
+                              className="w-24 h-24 bg-gradient-to-br from-orange-400 via-pink-400 to-purple-500 rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform bg-cover bg-center"
+                              style={{
+                                backgroundImage: getPackageImage(pkg)
+                                  ? `url(${getPackageImage(pkg)})`
+                                  : undefined,
+                              }}
                             />
-                          </svg>
-                          <span>{item.dates}</span>
-                        </div>
-                        <span className="text-red-500 font-bold">
-                          ${item.price}
-                        </span>
-                      </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-gray-900 mb-1 line-clamp-1">
+                                {pkg.name}
+                              </h4>
+                              <p className="text-sm text-gray-600 mb-1">
+                                {pkg.TourismCompany?.name || 'Travel Agency'}
+                              </p>
+                              {dates && (
+                                <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                                  <svg
+                                    className="w-3 h-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                  <span>
+                                    {formatDate(dates.startDate)} -{' '}
+                                    {formatDate(dates.endDate)}
+                                  </span>
+                                </div>
+                              )}
+                              <span className="text-red-500 font-bold">
+                                ${getPackagePrice(pkg).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                )}
 
-              {/* Otros destinos, mismas fechas */}
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  Other Locations, Same Dates
-                </h3>
-                <div className="space-y-4">
-                  {[
-                    {
-                      title: 'Amazon Jungle Expedition',
-                      dates: 'Mar 15 - Mar 20, 2026',
-                      location: 'Iquitos, Peru',
-                      price: 1450,
-                      company: 'Jungle Expeditions',
-                    },
-                    {
-                      title: 'Paracas & Ballestas Islands',
-                      dates: 'Mar 15 - Mar 20, 2026',
-                      location: 'Paracas, Peru',
-                      price: 950,
-                      company: 'Coastal Adventures',
-                    },
-                    {
-                      title: 'Colca Canyon Adventure',
-                      dates: 'Mar 15 - Mar 20, 2026',
-                      location: 'Arequipa, Peru',
-                      price: 1100,
-                      company: 'Andean Explorers',
-                    },
-                  ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors group"
-                      onClick={() => console.log('Navigate to:', item.title)}
-                    >
-                      <div className="w-24 h-24 bg-gradient-to-br from-blue-400 via-cyan-400 to-green-500 rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-900 mb-1 line-clamp-1">
-                          {item.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 mb-1">
-                          {item.company}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                            />
-                          </svg>
-                          <span className="line-clamp-1">{item.location}</span>
+                {/* Otros destinos, mismas fechas */}
+                {sameDatePackages.length > 0 && (
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                      Otros lugares, mismas fechas
+                    </h3>
+                    <div className="space-y-4">
+                      {sameDatePackages.map((pkg: TouristPackage) => (
+                        <div
+                          key={pkg.id}
+                          className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 cursor-pointer transition-colors group"
+                          onClick={() => router.push(`/package/${pkg.id}`)}
+                        >
+                          <div
+                            className="w-24 h-24 bg-gradient-to-br from-blue-400 via-cyan-400 to-green-500 rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform bg-cover bg-center"
+                            style={{
+                              backgroundImage: getPackageImage(pkg)
+                                ? `url(${getPackageImage(pkg)})`
+                                : undefined,
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-gray-900 mb-1 line-clamp-1">
+                              {pkg.name}
+                            </h4>
+                            <p className="text-sm text-gray-600 mb-1">
+                              {pkg.TourismCompany?.name || 'Travel Agency'}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                              <svg
+                                className="w-3 h-3"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                />
+                              </svg>
+                              <span className="line-clamp-1">
+                                {getPackageLocation(pkg)}
+                              </span>
+                            </div>
+                            <span className="text-red-500 font-bold">
+                              ${getPackagePrice(pkg).toFixed(2)}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-red-500 font-bold">
-                          ${item.price}
-                        </span>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
     </div>
   );
 }

@@ -69,8 +69,6 @@ export default function Header({ variant = 'default' }: HeaderProps) {
             className="flex items-center gap-2 cursor-pointer group"
             onClick={() => router.push('/')}
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg group-hover:scale-110 transition-transform" />
-
             <span
               className={`
                 text-xl font-bold transition-colors
@@ -276,7 +274,7 @@ export default function Header({ variant = 'default' }: HeaderProps) {
                 className={`px-4 py-2 rounded-full font-medium transition-all
                   ${
                     isTransparent
-                      ? 'bg-[var(--primary-dark-button)] text-white hover:bg-gray-800'
+                      ? 'bg-[var(--primary)] text-white hover:bg-gray-800'
                       : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
                   }
                 `}

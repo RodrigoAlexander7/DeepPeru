@@ -36,7 +36,6 @@ export default function Footer() {
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg" />
               <span className="text-xl font-bold">DeepPeru</span>
             </div>
             <p className="text-gray-400 text-sm">
