@@ -12,7 +12,7 @@ import {
 import {
   getActivities,
   getCities,
-} from '@/features/packages/services/packageService';
+} from '@/features/travel-packages/services/packageService';
 
 export interface ActivitiesData {
   representativeCityId?: number;
@@ -385,9 +385,8 @@ export default function ActivitiesForm({
                         : undefined,
                     }))
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.activityId ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.activityId ? 'border-red-500' : 'border-gray-300'
+                    }`}
                 >
                   <option value="">Seleccionar actividad...</option>
                   {existingActivities.map((activity) => (
@@ -423,9 +422,8 @@ export default function ActivitiesForm({
                         name: e.target.value,
                       }))
                     }
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.name ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.name ? 'border-red-500' : 'border-gray-300'
+                      }`}
                     placeholder="Nombre de la actividad"
                   />
                   {errors.name && (
@@ -505,9 +503,8 @@ export default function ActivitiesForm({
                       startDate: e.target.value,
                     }))
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.startDate ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.startDate ? 'border-red-500' : 'border-gray-300'
+                    }`}
                 />
                 {errors.startDate && (
                   <p className="mt-1 text-sm text-red-500">
@@ -533,9 +530,8 @@ export default function ActivitiesForm({
                       endDate: e.target.value,
                     }))
                   }
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.endDate ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.endDate ? 'border-red-500' : 'border-gray-300'
+                    }`}
                 />
                 {errors.endDate && (
                   <p className="mt-1 text-sm text-red-500">{errors.endDate}</p>
@@ -636,11 +632,10 @@ export default function ActivitiesForm({
                           key={day.value}
                           type="button"
                           onClick={() => toggleDay(day.value)}
-                          className={`px-2 py-1 text-xs rounded ${
-                            currentSchedule.daysOfWeek.includes(day.value)
+                          className={`px-2 py-1 text-xs rounded ${currentSchedule.daysOfWeek.includes(day.value)
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-200 text-gray-700'
-                          }`}
+                            }`}
                         >
                           {day.label}
                         </button>

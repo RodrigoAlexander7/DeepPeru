@@ -7,7 +7,7 @@ import {
   PackageType,
   DifficultyLevel,
 } from '@/types/package';
-import { createTouristPackage } from '@/features/packages/services/packageService';
+import { createTouristPackage } from '@/features/travel-packages/services/packageService';
 import BasicInfoForm, { BasicInfoData } from './BasicInfoForm';
 import OperationalDetailsForm, {
   OperationalDetailsData,
@@ -253,31 +253,28 @@ export default function CreatePackageStepper({
             <div key={step.number} className="flex items-center flex-1">
               <div className="flex flex-col items-center flex-1">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition ${
-                    currentStep === step.number
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition ${currentStep === step.number
                       ? 'bg-blue-600 text-white'
                       : currentStep > step.number
                         ? 'bg-green-600 text-white'
                         : 'bg-gray-300 text-gray-600'
-                  }`}
+                    }`}
                 >
                   {currentStep > step.number ? '✓' : step.number}
                 </div>
                 <div
-                  className={`text-xs mt-2 text-center font-medium ${
-                    currentStep === step.number
+                  className={`text-xs mt-2 text-center font-medium ${currentStep === step.number
                       ? 'text-blue-600'
                       : 'text-gray-500'
-                  }`}
+                    }`}
                 >
                   {step.title}
                 </div>
               </div>
               {index < steps.length - 1 && (
                 <div
-                  className={`h-1 flex-1 mx-2 transition ${
-                    currentStep > step.number ? 'bg-green-600' : 'bg-gray-300'
-                  }`}
+                  className={`h-1 flex-1 mx-2 transition ${currentStep > step.number ? 'bg-green-600' : 'bg-gray-300'
+                    }`}
                   style={{ marginTop: '-40px' }}
                 />
               )}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CreatePricingOptionDto, Currency } from '@/types/package';
-import { getCurrencies } from '@/features/packages/services/packageService';
+import { getCurrencies } from '@/features/travel-packages/services/packageService';
 
 export interface PricingData {
   pricingOptions: CreatePricingOptionDto[];
@@ -247,9 +247,8 @@ export default function PricingForm({
                 name="name"
                 value={currentOption.name}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.name ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="Ej: Precio Regular, Precio de Temporada"
               />
               {errors.name && (
@@ -313,9 +312,8 @@ export default function PricingForm({
                   onChange={handleChange}
                   step="0.01"
                   min="0"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.amount ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.amount ? 'border-red-500' : 'border-gray-300'
+                    }`}
                 />
                 {errors.amount && (
                   <p className="mt-1 text-sm text-red-500">{errors.amount}</p>
@@ -351,11 +349,10 @@ export default function PricingForm({
                   value={currentOption.minParticipants ?? ''}
                   onChange={handleChange}
                   min="1"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.minParticipants
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.minParticipants
                       ? 'border-red-500'
                       : 'border-gray-300'
-                  }`}
+                    }`}
                 />
                 {errors.minParticipants && (
                   <p className="mt-1 text-sm text-red-500">
@@ -378,11 +375,10 @@ export default function PricingForm({
                   value={currentOption.maxParticipants ?? ''}
                   onChange={handleChange}
                   min="1"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.maxParticipants
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.maxParticipants
                       ? 'border-red-500'
                       : 'border-gray-300'
-                  }`}
+                    }`}
                 />
                 {errors.maxParticipants && (
                   <p className="mt-1 text-sm text-red-500">
@@ -423,9 +419,8 @@ export default function PricingForm({
                   name="validTo"
                   value={currentOption.validTo || ''}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.validTo ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.validTo ? 'border-red-500' : 'border-gray-300'
+                    }`}
                 />
                 {errors.validTo && (
                   <p className="mt-1 text-sm text-red-500">{errors.validTo}</p>
