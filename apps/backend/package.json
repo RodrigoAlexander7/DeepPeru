@@ -1,14 +1,17 @@
 {
-  "name": "@deepperu/backend",
+  "name": "deepperu-backend",
   "version": "0.0.1",
-  "description": "",
+  "description": "DeepPeru Backend API",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "packageManager": "pnpm@10.18.2",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
+    "dev": "nest start --watch",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
@@ -20,7 +23,11 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed": "ts-node prisma/seed.ts create",
     "db:seed:delete": "ts-node prisma/seed.ts delete",
-    "db:seed:reset": "ts-node prisma/seed.ts delete && ts-node prisma/seed.ts create"
+    "db:seed:reset": "ts-node prisma/seed.ts delete && ts-node prisma/seed.ts create",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "prepare": "cd ../.. && husky || true"
   },
   "dependencies": {
     "@nestjs/common": "11.0.1",
@@ -48,6 +55,8 @@
     "swagger-ui-express": "5.0.1"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
     "@eslint/eslintrc": "3.2.0",
     "@eslint/js": "9.18.0",
     "@nestjs/cli": "11.0.0",
@@ -68,7 +77,9 @@
     "eslint-config-prettier": "10.0.1",
     "eslint-plugin-prettier": "5.2.2",
     "globals": "16.0.0",
+    "husky": "^9.1.7",
     "jest": "30.0.0",
+    "lint-staged": "^16.2.4",
     "prettier": "3.4.2",
     "prisma": "6.18.0",
     "prisma-docs-generator": "0.8.0",
@@ -98,5 +109,10 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "lint-staged": {
+    "*.{ts,js,json}": [
+      "prettier --write"
+    ]
   }
 }
