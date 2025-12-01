@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 // @ts-ignore
 import { DateRangePicker } from 'react-date-range';
@@ -12,7 +12,7 @@ import { travelService } from '@/features/travel/travelService';
 import { SearchParams } from '@/types';
 import { useSearchParams } from 'next/navigation';
 
-export default function SearchBar() {
+function SearchBarContent() {
   const router = useRouter();
   const [destination, setDestination] = useState('');
   const [travelers, setTravelers] = useState(2);
@@ -410,5 +410,21 @@ export default function SearchBar() {
         Buscar
       </button>
     </div>
+  );
+}
+
+export default function SearchBar() {
+  return (
+    <Suspense fallback={
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="animate-pulse flex space-x-4">
+          <div className="flex-1 space-y-4 py-1">
+            <div className="h-10 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <SearchBarContent />
+    </Suspense>
   );
 }
