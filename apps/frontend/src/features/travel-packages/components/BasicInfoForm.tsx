@@ -33,7 +33,7 @@ export default function BasicInfoForm({
     // Cargar idiomas disponibles
     const fetchLanguages = async () => {
       try {
-        const response = await fetch(`${process.env.BACKEND_URL}/auth/google`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/google`, {
           credentials: 'include',
         });
         if (response.ok) {
