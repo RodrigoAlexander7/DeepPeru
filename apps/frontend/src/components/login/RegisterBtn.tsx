@@ -2,7 +2,7 @@
 
 export default function RegisterBtn() {
   const handleRegister = () => {
-    window.location.href = 'http://localhost:3000/auth/google';
+    window.location.href = `${process.env.BACKEND_URL}/auth/google`;
   };
 
   return (
